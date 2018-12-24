@@ -5,65 +5,124 @@
 #ifndef RPG2D_GAMESCREEN_H
 #define RPG2D_GAMESCREEN_H
 
+#include <math.h>
 
 #include "Screen.h"
 #include "Texture.h"
-#include "Vertices.h"
+#include "Vertex.h"
 #include "MultiTouchHandler.h"
 #include "SpriteBatcher.h"
+#include "Vector.h"
+#include "World.h"
+#include "WorldRenderer.h"
 
 #define  LOGI(...)  __android_log_print(ANDROID_LOG_INFO,"GameScreen",__VA_ARGS__)
 
 class GameScreen: public Screen {
 private:
-    Texture* texture;
-    SpriteBatcher* spriteBatcher;
 
-    const int map[931] = {146,146,146,146,135,135,135,146,146,135,135,146,135,146,135,135,146,135,146,146,146,23,2,113,113,197,2,2,2,2,2,197,198,197,198,197,43,135,135,135,146,135,135,135,135,146, 135,135,146,146,146,135,135,146,146,146,135,135,146,146,135,146,135,146,146,135,146,135,146,2,23,198,17,19,2,2,2,197,198,197,198,23,2,2,2,43,146,146,146,135,146,146,146,146,135,146,135,135,146,135,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,162,162,162,197,198,2,33,35,197,2,197,198,197,198,197,198,2,2,197,43,146,146,146,146,146,146,146,146,146,146,146,135,135,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,147,2,2,197,198,197,198,49,51,2,197,198,23,20,21,21,22,227,2,2,43,146,146,146,146,146,146,146,146,146,146,146,135,135,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,147,23,20,21,21,21,21,21,22,197,198,23,2,36,183,184,38,227,2,197,43,146,146,146,146,146,146,146,146,146,146,146,135,146,135,146,146,146,146,146,146,146,146,146,146,146,146,146,146,147,2,52,53,53,53,53,37,38,225,2,2,2,36,199,200,38,227,2,23,43,146,146,146,146,146,146,146,146,146,146,146,135,135,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,147,2,226,242,210,167,2,36,38,225,2,2,2,52,53,53,38,227,2,197,43,146,146,146,146,146,146,146,146,146,146,146,135,135,135,146,146,146,146,146,146,146,146,146,146,146,146,146,146,147,2,2,2,2,225,23,36,38,225,212,213,214,215,216,168,6,227,2,2,43,146,146,146,146,146,146,146,146,146,146,135,135,146,135,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,130,131,2,2,225,2,36,38,241,228,229,7,231,232,210,6,243,23,197,198,2,146,146,146,146,146,146,146,146,146,135,146,146,135,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,130,2,225,2,36,37,21,21,21,21,21,21,21,37,21,21,22,227,2,146,146,146,146,146,146,146,146,146,146,135,135,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,2,225,23,52,53,53,53,53,53,53,53,53,53,53,53,54,227,2,146,146,146,146,146,146,146,146,146,146,135,146,135,146,146,162,162,146,146,146,146,146,146,146,146,146,146,146,146,146,146,2,241,242,242,242,242,242,242,242,242,242,242,242,242,242,242,243,2,146,146,146,146,146,146,146,146,146,135,146,135,146,146,147,17,19,145,146,146,146,146,146,146,146,146,146,146,146,146,146,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,146,146,146,146,146,146,146,146,146,135,135,135,146,146,147,33,35,145,146,146,146,146,146,146,146,146,146,146,146,146,146,44,45,45,45,45,45,45,45,45,45,45,45,45,45,45,45,45,46,146,146,146,146,146,146,146,146,146,146,135,146,135,146,147,49,51,145,146,146,146,146,146,146,146,146,146,146,146,146,146,60,61,61,61,61,61,61,61,61,61,61,61,61,61,61,61,61,62,146,146,146,146,146,146,146,146,146,146,135,146,135,146,146,130,130,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,135,135,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,146,135,146,135,146,146,135,135,146,146,146,135,146,135,146,146,135,146,146,146,146,135,135,146,146,135,135,135,135,146,146,146,146,146,146,135,135,146,146,146,146,146,146,146,146,146,146,135,146,135,135,146,146,135,135,146,146,135,135,135,146,135,146,135,135,146,135,135,135,135,146,146,135,135,146,146,146,135,135,135,135,135,135,135,146,146,135,135,135,135,135,135,135,135,135,135,146,135,135,146};
-    const int width = 49;
+    World world;
+    WorldRenderer *worldRenderer;
+    Texture *ui;
+    TextureRegion *pa, *pb;
+    SpriteBatcher *spriteBatcher;
 
-    const float textureWidth = 1024.f;
-    const float textureHeight = 1024.f;
+    float controllerX = 150;
+    float controllerY = 570;
+    short controllerPointer = -1;
 
-    TextureRegion getTextureRegionFromIndex(int index){
-        int y = (index/16);
-        int x = (index%16);
-        return TextureRegion((float)(x * 64)/textureWidth,(float)(y * 64)/textureHeight,(float)64/textureWidth,(float)64/textureHeight);
+    bool updateController(Touch event, Vector &vector){
+
+        const int LCtrlX = 150;
+        const int LCtrlY = 570;
+        const int maxR = 100;
+        const int minR = 25;
+        int dx = event.x - LCtrlX;
+        int dy = event.y - LCtrlY;
+        float length = (float) sqrt(dx * dx + dy * dy);
+        if (event.action == TOUCH_DOWN) {
+            if (length < maxR && controllerPointer == -1) {
+                controllerPointer = event.pointer;
+                controllerX = event.x;
+                controllerY = event.y;
+                if (length > minR) {
+                    vector.x = (float) dx / length;
+                    vector.y = (float) dy / length;
+                }
+                return true;
+            }
+        } else if (event.action == TOUCH_DRAGGED) {
+            if (event.pointer == controllerPointer) {
+                if(length > minR){
+                    vector.x = (float) dx / length;
+                    vector.y = (float) dy / length;
+                }else{
+                    vector.x = 0;
+                    vector.y = 0;
+                }
+                if(length < maxR){
+                    controllerX = event.x;
+                    controllerY = event.y;
+                }else{
+                    controllerX = LCtrlX + vector.x * maxR;
+                    controllerY = LCtrlY + vector.y * maxR;
+                }
+                return true;
+            }
+        } else if (event.action == TOUCH_UP) {
+            if (event.pointer == controllerPointer) {
+                controllerPointer = -1;
+                vector.x = 0;
+                vector.y = 0;
+                controllerX = 150;
+                controllerY = 570;
+                return true;
+            }
+        }
+        return false;
     }
 
 public:
-    GameScreen(JNIEnv *env) : Screen(env) {
-        texture = new Texture(env, "GoP_1.png");
-        spriteBatcher = new SpriteBatcher(240);
+
+    Vector v;
+
+    GameScreen(JNIEnv *env) : Screen(env),v(0.f,0.f) {
+
+        spriteBatcher = new SpriteBatcher(273*2+1);
+        ui = new Texture(env, "ui.png");
+        pa = new TextureRegion(0,0,(float)3*64/512,(float)3*64/512);
+        pb = new TextureRegion((float)(3 * 64)/512,0,(float)2.5*64/512,(float)2.5*64/512);
+        worldRenderer = new WorldRenderer(env, &world, spriteBatcher);
     }
 
     void resume() override {
-        texture->reload();
+
+        worldRenderer->reload();
+        ui->reload();
     }
 
     void update(float deltaTime, MultiTouchHandler* handler) override {
+
         std::vector<Touch> touchEvents = handler->getTouchEvents();
-        //for(Touch e : touchEvents) {}
-    }
 
-    void present(GLuint gvPositionHandle, GLuint gvCoordinateHandle, GLint gvMatrixHandle, glm::mat4 mMVPMatrix) override {
-        spriteBatcher->beginBatch(texture);
-
-        int startX = 18;
-        for(int y=0;y<12;y++){
-            for(int x=startX;x<startX+20;x++){
-                if(y * width + x < 931){
-                    int tileId = map[y * width + x] - 1;
-                    spriteBatcher->drawSprite((x-startX)*64,y*64,64,64,getTextureRegionFromIndex(tileId));
-                    for (GLint error = glGetError(); error; error
-                                                                    = glGetError()) {
-                        LOGI("after %s() glError (0x%x)\n", "drawSprite", error);
-                    }
-                }
-            }
+        for(Touch e : touchEvents) {
+            if(updateController(e, v))
+                world.setPlayerVelocity(v);
         }
 
-        //glUniformMatrix4fv(gvMatrixHandle,1,GL_FALSE,glm::value_ptr(mMVPMatrix));
+        world.update(deltaTime);
+    }
+
+    void present(GLuint gvPositionHandle, GLuint gvCoordinateHandle) override {
+
+        worldRenderer->render(gvPositionHandle, gvCoordinateHandle);
+
+        //UI
+        spriteBatcher->beginBatch(ui);
+
+        //Draw Pad
+        spriteBatcher->drawSprite(54,474,192,192,*pa);
+        spriteBatcher->drawSprite(controllerX-80,controllerY-80,160,160,*pb);
 
         spriteBatcher->endBatch(gvPositionHandle, gvCoordinateHandle);
     }

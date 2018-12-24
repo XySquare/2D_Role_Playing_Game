@@ -20,7 +20,7 @@ public:
 
     virtual void update(float deltaTime, MultiTouchHandler *handler) = 0;
 
-    virtual void present(GLuint gvPositionHandle, GLuint gvCoordinateHandle, GLint gvMatrixHandle, glm::mat4 mMVPMatrix) = 0;
+    virtual void present(GLuint gvPositionHandle, GLuint gvCoordinateHandle) = 0;
 };
 
 

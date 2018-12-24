@@ -13,12 +13,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <chrono> //time
+#include <chrono>
 
 #include "glm/mat4x4.hpp"
-#include "glm/ext.hpp"
+#include "glm/ext/matrix_clip_space.hpp"
+#include "glm/gtc/type_ptr.hpp"
 #include "Texture.h"
-#include "Vertices.h"
+#include "Vertex.h"
 #include "Screen.h"
 #include "GameScreen.h"
 #include "MultiTouchHandler.h"
@@ -45,6 +46,10 @@ MultiTouchHandler *gMultiTouchHandler;
 Screen *currentScreen;
 
 long long int startTime;
+
+float deltaTime = 1.0f/60.0f;
+
+int frames = 0;
 
 auto gVertexShader =
         "attribute vec4 vPosition;\n" // Per-vertex position information we will pass in.
@@ -198,7 +203,12 @@ void onSurfaceCreated(JNIEnv *env){
     glEnable(GL_BLEND);
 
     //Set blending function, specifies how the source and destination color should be combined
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendEquation(GL_FUNC_ADD);
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    // Premultiplied alpha means that all input color values are already multiplied with the alpha value.
+    // Normal alpha blending then requires different blend function.
+    // Instead of SRC_ALPHA,1-SRC_ALPHA you need to use 1,1-SRC_ALPHA
+    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
     gProgram = createProgram(gVertexShader, gFragmentShader);
     if (!gProgram) {
@@ -226,7 +236,7 @@ void onSurfaceCreated(JNIEnv *env){
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     checkGlError("glClearColor");
 
-    glUniformMatrix4fv(gvMatrixHandle,1,GL_FALSE,glm::value_ptr(mMVPMatrix));
+    glUniformMatrix4fv(gvMatrixHandle, 1, GL_FALSE, glm::value_ptr(mMVPMatrix));
 
     currentScreen->resume();
 }
@@ -241,26 +251,25 @@ void onSurfaceChanged(int w, int h) {
     startTime = nanoTime();
 }
 
-long long int fpsStartTime;
-int frames = 0;
-
 void onDrawFrame() {
-    long long int curTime = nanoTime();
-    float deltaTime = (curTime - startTime) / 1000000000.0f;
-    startTime = curTime;
 
-    frames++;
-    if(curTime - fpsStartTime >= 1000000000) {
+    long long int curTime = nanoTime();
+
+    if(curTime - startTime >= 1000000000) {
         LOGD("Fps: %d",frames);
+        if(frames >= 59 || frames <= 0)
+            frames = 60;
+        deltaTime = 1.0f/frames;
         frames = 0;
-        fpsStartTime = curTime;
+        startTime = curTime;
     }
+    frames++;
 
     glClear( GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-    checkGlError("glClear");
+    //checkGlError("glClear");
 
     currentScreen->update(deltaTime, gMultiTouchHandler);
-    currentScreen->present(gvPositionHandle,gvCoordinateHandle,gvMatrixHandle,mMVPMatrix);
+    currentScreen->present(gvPositionHandle,gvCoordinateHandle);
 }
 
 extern "C" {
@@ -290,10 +299,10 @@ JNIEXPORT void JNICALL
 Java_xyy_game_rpg2d_framework_GL2JNILib_onTouch(JNIEnv *env, jclass type, jint pointer,
                                                 jshort action, jint x, jint y) {
     Touch event;
-    event.pointer = (int)pointer;
+    event.pointer = (short)pointer;
     event.action = (short)action;
-    event.x = (int)x;
-    event.y = (int)y;
+    event.x = (short)x;
+    event.y = (short)y;
     gMultiTouchHandler->onTouch(event);
 }
 

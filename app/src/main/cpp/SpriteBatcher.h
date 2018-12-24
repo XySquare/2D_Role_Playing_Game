@@ -7,14 +7,14 @@
 
 
 #include "Texture.h"
-#include "Vertices.h"
+#include "Vertex.h"
 #include "TextureRegion.h"
 
 #define  LOGI_SpriteBatcher(...)  __android_log_print(ANDROID_LOG_INFO,"SpriteBatcher",__VA_ARGS__)
 
 class SpriteBatcher {
 private:
-    Vertices* vertices;
+    Vertex* vertices;
     GLfloat* verticesBuffer;
     GLuint *indices;
     int bufferIndex;
@@ -22,7 +22,7 @@ private:
 public:
     SpriteBatcher(int maxSprites) {
         verticesBuffer = new GLfloat[4*4*maxSprites];
-        vertices = new Vertices(true);
+        vertices = new Vertex(true);
 
         bufferIndex = 0;
         numSprites = 0;

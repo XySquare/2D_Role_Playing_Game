@@ -9,8 +9,6 @@
 #include <jni.h>
 #include <GLES2/gl2.h>
 
-#define  LOGI_Texture(...)  __android_log_print(ANDROID_LOG_INFO,"Texture",__VA_ARGS__)
-
 class Texture {
 private:
 
@@ -24,7 +22,6 @@ private:
         jmethodID mId = env->GetStaticMethodID(cls,"load","(Ljava/lang/String;)I"); // Don't forget ';'
         jstring jstr = env->NewStringUTF(fileName);
         textureId = (GLuint)(env->CallStaticIntMethod(cls,mId,jstr));
-        LOGI_Texture("TextureId: %d",textureId);
     }
 
 public:
