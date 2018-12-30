@@ -9,19 +9,23 @@
 #include "Texture.h"
 #include "Vertex.h"
 #include "TextureRegion.h"
-
-#define  LOGI_SpriteBatcher(...)  __android_log_print(ANDROID_LOG_INFO,"SpriteBatcher",__VA_ARGS__)
+#include "UnitTexture.h"
 
 class SpriteBatcher {
+
 private:
-    Vertex* vertices;
-    GLfloat* verticesBuffer;
+
+    Vertex *vertices;
+    GLfloat *verticesBuffer;
     GLuint *indices;
     int bufferIndex;
     int numSprites;
+
 public:
+
     SpriteBatcher(int maxSprites) {
-        verticesBuffer = new GLfloat[4*4*maxSprites];
+
+        verticesBuffer = new GLfloat[4 * 4 * maxSprites];
         vertices = new Vertex(true);
 
         bufferIndex = 0;
@@ -41,22 +45,31 @@ public:
         vertices->setIndices(indices);
     }
 
-    void beginBatch(Texture* texture) {
+    void beginBatch(Texture *texture) {
 
+        glVertexAttrib4f(GRAPHIC_COLOR_HANDEL, 1.f, 1.f, 1.f, 1.f);
         texture->bind();
         numSprites = 0;
         bufferIndex = 0;
     }
 
-    void endBatch(GLuint positionHandle, GLuint coordinateHandle) {
-        //LOGI_SpriteBatcher("verticesBuffer %f,%f",verticesBuffer[0],verticesBuffer[1]);
-        //LOGI_SpriteBatcher("indices %d,%d",indices[0],indices[1]);
+    void beginBatch(UnitTexture *texture) {
+
+        //glVertexAttrib4f(GRAPHIC_COLOR_HANDEL,1.f,1.f,1.f,1.f);
+        texture->bind();
+        numSprites = 0;
+        bufferIndex = 0;
+    }
+
+    void endBatch() {
+
         vertices->setVertices(verticesBuffer);
-        vertices->bind(positionHandle, coordinateHandle);
+        vertices->bind();
         vertices->draw(GL_TRIANGLES, numSprites * 6);
     }
 
     void drawSprite(float x, float y, float width, float height, TextureRegion region) {
+
         float x1 = x;
         float y1 = y;
         float x2 = x + width;
@@ -86,10 +99,10 @@ public:
     }
 
     virtual ~SpriteBatcher() {
-if(vertices)
-    delete vertices;
-if(verticesBuffer)
-    delete verticesBuffer;
+
+        delete vertices;
+        delete[] verticesBuffer;
+        delete[] indices;
     }
 };
 

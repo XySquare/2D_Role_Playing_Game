@@ -7,17 +7,19 @@
 
 
 #include <GLES2/gl2.h>
-
-#define  LOGI_Vertices(...)  __android_log_print(ANDROID_LOG_INFO,"Vertices",__VA_ARGS__)
+#include "Graphic.h"
 
 class Vertex {
+
 private:
+
     const bool hasTexCoords;
     const int stride;
     GLfloat *vertices;
     GLuint *indices;
 
 public:
+
     Vertex(const bool hasTexCoords) : hasTexCoords(hasTexCoords),
                                         stride((2 + (hasTexCoords?2:0)) * sizeof(GLfloat)){
         indices = NULL;
@@ -31,14 +33,12 @@ public:
         Vertex::indices = indices;
     }
 
-    void bind(GLuint positionHandle, GLuint coordinateHandle) {
+    void bind() {
 
-        glVertexAttribPointer(positionHandle, 2, GL_FLOAT, GL_FALSE, stride, vertices);
-        //LOGI_Vertices("positionHandle %f %f",vertices[0],vertices[1]);
+        glVertexAttribPointer(GRAPHIC_VERTEX_HANDLE, 2, GL_FLOAT, GL_FALSE, stride, vertices);
 
         if(hasTexCoords) {
-            glVertexAttribPointer(coordinateHandle, 2, GL_FLOAT, GL_FALSE, stride, vertices + 2);
-            //LOGI_Vertices("positionHandle %f %f",vertices[2],vertices[3]);
+            glVertexAttribPointer(GRAPHIC_TEXTURE_HANDEL, 2, GL_FLOAT, GL_FALSE, stride, vertices + 2);
         }
     }
 
@@ -50,13 +50,8 @@ public:
             glDrawArrays(primitiveType, 0, numVertices);
     }
 
-    //Destructor
-    ~Vertex()
-    {
-        if(vertices)
-            delete vertices;
-        if(indices)
-            delete indices;
+    ~Vertex() {
+
     }
 };
 

@@ -9,11 +9,11 @@
 #include <mutex>
 #include <vector>
 
-const static short TOUCH_DOWN = 0;
-
-const static short TOUCH_UP = 1;
-
-const static short TOUCH_DRAGGED = 2;
+enum Action {
+    TOUCH_DOWN = 0,
+    TOUCH_UP,
+    TOUCH_DRAGGED
+};
 
 struct Touch{
 

@@ -10,11 +10,16 @@
 #include <GLES2/gl2.h>
 
 class Texture {
+
 private:
 
     JNIEnv *const env;
     const char* fileName;
     GLuint textureId;
+
+public:
+
+    Texture(JNIEnv *const env, const char *fileName) : env(env), fileName(fileName) {}
 
     void load() {
 
@@ -22,20 +27,6 @@ private:
         jmethodID mId = env->GetStaticMethodID(cls,"load","(Ljava/lang/String;)I"); // Don't forget ';'
         jstring jstr = env->NewStringUTF(fileName);
         textureId = (GLuint)(env->CallStaticIntMethod(cls,mId,jstr));
-    }
-
-public:
-
-    Texture(JNIEnv *const env, const char *fileName) : env(env), fileName(fileName) {
-
-        load();
-    }
-
-    void reload() {
-
-        load();
-        bind();
-        glBindTexture(GL_TEXTURE_2D, 0);
     }
 
     void bind() {
@@ -47,6 +38,11 @@ public:
 
         glBindTexture(GL_TEXTURE_2D, textureId);
         glDeleteTextures(1, &textureId);
+    }
+
+    ~Texture() {
+
+        dispose();
     }
 };
 

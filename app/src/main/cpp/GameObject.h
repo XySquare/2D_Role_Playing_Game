@@ -16,6 +16,10 @@ public:
     //Rectangle bounds;
 
     GameObject(float x, float y) : position(Vector(x,y)) {}
+
+    virtual ~GameObject() {
+
+    }
 };
 
 

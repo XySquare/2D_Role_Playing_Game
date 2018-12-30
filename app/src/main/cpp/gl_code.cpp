@@ -23,6 +23,7 @@
 #include "Screen.h"
 #include "GameScreen.h"
 #include "MultiTouchHandler.h"
+#include "Graphic.h"
 
 #define  LOG_TAG    "libgl2jni"
 #define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG,__VA_ARGS__)
@@ -31,15 +32,16 @@
 
 long long int nanoTime();
 
-bool isInstantiated = false;
+bool isInitialized = false;
 
 glm::mat4 mMVPMatrix;
 
 GLuint gProgram;
-GLuint gvPositionHandle;
-GLuint gvCoordinateHandle;
-GLint gvMatrixHandle;
+//GLuint gvPositionHandle;
+//GLuint gvCoordinateHandle;
+//GLint gvMatrixHandle;
 //GLint gvTextureHandle;
+//GLint gvColorHandle;
 
 MultiTouchHandler *gMultiTouchHandler;
 
@@ -52,21 +54,25 @@ float deltaTime = 1.0f/60.0f;
 int frames = 0;
 
 auto gVertexShader =
-        "attribute vec4 vPosition;\n" // Per-vertex position information we will pass in.
-        "attribute vec2 vCoordinate;\n"
-        "uniform mat4 uMVPMatrix;\n"
-        "varying vec2 aCoordinate;\n" // This will be passed into the fragment shader.
+        "attribute vec4 aVertexCoordinate;\n" // Per-vertex position information we will pass in.
+        "attribute vec2 aTextureCoordinate;\n"
+        "attribute vec4 aColor;"
+        "uniform mat4 uMVPMatrix;\n" // Uniform values are persistent across program usages
+        "varying vec2 vTextureCoordinate;\n" // Varying will be passed into the fragment shader.
+        "varying vec4 vColor; "
         "void main() {\n"
-        "  gl_Position = uMVPMatrix * vPosition;\n" // gl_Position is a special variable used to store the final position.
-        "  aCoordinate=vCoordinate;"
+        "  gl_Position = uMVPMatrix * aVertexCoordinate;\n" // gl_Position is a special variable used to store the final position.
+        "  vTextureCoordinate = aTextureCoordinate;"
+        "  vColor = aColor;"
         "}\n";
 
 auto gFragmentShader =
         "precision mediump float;\n" // Set the default precision to medium. We don't need as high of a precision in the fragment shader.
-        "uniform sampler2D vTexture;\n"
-        "varying vec2 aCoordinate;\n"
+        "uniform sampler2D uTexture;\n"
+        "varying vec2 vTextureCoordinate;\n"
+        "varying vec4 vColor; "
         "void main() {\n"
-        "  gl_FragColor=texture2D(vTexture,aCoordinate);\n"//"  gl_FragColor = vec4(0.0, 0.0, 0.0, 0.5);\n"
+        "  gl_FragColor = vColor * texture2D(uTexture,vTextureCoordinate);\n"//"  gl_FragColor = vec4(0.0, 0.0, 0.0, 0.5);\n"
         "}\n";
 
 static void printGLString(const char *name, GLenum s) {
@@ -132,8 +138,15 @@ GLuint createProgram(const char* pVertexSource, const char* pFragmentSource) {
     //创建一个程序，并且将索引赋值给program
     GLuint program = glCreateProgram();
     checkGlError("glCreateProgram");
+
+    // Associate generic vertex attribute indexes with named attribute variables
+    // Called before any vertex shader objects are bound to the specified program object
+    glBindAttribLocation(program, GRAPHIC_VERTEX_HANDLE, "aVertexCoordinate");
+    glBindAttribLocation(program, GRAPHIC_TEXTURE_HANDEL, "aTextureCoordinate");
+    glBindAttribLocation(program, GRAPHIC_COLOR_HANDEL, "aColor");
+
     if (program) {
-        //关联着色器并链接程序
+        // Attach Shaders and link program
         glAttachShader(program, vertexShader);
         checkGlError("glAttachShader_v");
         glAttachShader(program, pixelShader);
@@ -142,9 +155,9 @@ GLuint createProgram(const char* pVertexSource, const char* pFragmentSource) {
         GLint linkStatus = GL_FALSE;
         glGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
         if (linkStatus != GL_TRUE) {
-            //保存日志
+            // Save Log
             GLint bufLength = 0;
-            //获取日志信息
+            // Get the date of Log / 获取日志信息
             glGetProgramiv(program, GL_INFO_LOG_LENGTH, &bufLength);
             if (bufLength) {
                 char* buf = (char*) malloc(bufLength);
@@ -155,7 +168,7 @@ GLuint createProgram(const char* pVertexSource, const char* pFragmentSource) {
                     free(buf);
                 }
             }
-            //删除程序
+            // Delete Program when failed / 删除程序
             glDeleteProgram(program);
             program = 0;
         }
@@ -167,24 +180,28 @@ long long int nanoTime(){
     return std::chrono::duration_cast< std::chrono::nanoseconds >(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 }
 
-void instantiate(JNIEnv *env){
+void onInitialize(JNIEnv *env){
+
+    Assets::setup(env);
 
     gMultiTouchHandler = new MultiTouchHandler();
 
-    currentScreen = new GameScreen(env);
+    currentScreen = new GameScreen();
 
     // Projection matrix
-    mMVPMatrix = glm::ortho( 0.f, 1280.f, 720.f, 0.f, -1.f, 1.f );
+    mMVPMatrix = glm::ortho(0.f, 1280.f, 720.f, 0.f, -1.f, 1.f);
+
+    LOGI("instantiated.");
 }
 
 void onSurfaceCreated(JNIEnv *env){
 
-    if(!isInstantiated){
-        instantiate(env);
-        isInstantiated = true;
+    if(!isInitialized){
+        onInitialize(env);
+        isInitialized = true;
+    }else{
+        Assets::reload();
     }
-
-    //uint64_t i;
 
     printGLString("Version", GL_VERSION);
     printGLString("Vendor", GL_VENDOR);
@@ -215,11 +232,13 @@ void onSurfaceCreated(JNIEnv *env){
         LOGE("Could not create program.");
         return;
     }
-    gvPositionHandle = glGetAttribLocation(gProgram, "vPosition");
-    gvCoordinateHandle = glGetAttribLocation(gProgram, "vCoordinate");
-    gvMatrixHandle = glGetUniformLocation(gProgram, "uMVPMatrix");
-    //GLint gvTextureHandle = glGetUniformLocation(gProgram, "vTexture");
+    GLint gvMatrixHandle = glGetUniformLocation(gProgram, "uMVPMatrix");
+    //gvPositionHandle = glGetAttribLocation(gProgram, "aVertexCoordinate");
+    //gvCoordinateHandle = glGetAttribLocation(gProgram, "aTextureCoordinate");
+    //gvColorHandle = glGetAttribLocation(gProgram, "aColor");
+    //GLint gvTextureHandle = glGetUniformLocation(gProgram, "uTexture");
     //glUniform1i(gvTextureHandle, 0);
+            // Error 502, Why?
     checkGlError("glGetAttribLocation");
 
     //使用一个着色器程序(在OpenGL中我们可以持有多个着色器程序)
@@ -227,10 +246,10 @@ void onSurfaceCreated(JNIEnv *env){
     glUseProgram(gProgram);
     checkGlError("glUseProgram");
 
-    glEnableVertexAttribArray(gvPositionHandle);
+    glEnableVertexAttribArray(GRAPHIC_VERTEX_HANDLE);
     checkGlError("glEnableVertexAttribArray");
 
-    glEnableVertexAttribArray(gvCoordinateHandle);
+    glEnableVertexAttribArray(GRAPHIC_TEXTURE_HANDEL);
     checkGlError("glEnableVertexAttribArray");
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -269,7 +288,7 @@ void onDrawFrame() {
     //checkGlError("glClear");
 
     currentScreen->update(deltaTime, gMultiTouchHandler);
-    currentScreen->present(gvPositionHandle,gvCoordinateHandle);
+    currentScreen->present();
 }
 
 extern "C" {

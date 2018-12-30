@@ -15,6 +15,10 @@ public:
     Vector velocity;
 
     DynamicGameObject(float x, float y) : GameObject(x, y), velocity(Vector(0,0)) {}
+
+    virtual ~DynamicGameObject() override {
+
+    }
 };
 
 

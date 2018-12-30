@@ -8,7 +8,7 @@
 
 #include "Tile.h"
 
-class AnimeTile: public Tile {
+class AnimeTile final: public Tile {
 
 private:
 
@@ -28,9 +28,9 @@ public:
         return frames[frameNumber % gid];
     };
 
-    virtual ~AnimeTile() {
+    virtual ~AnimeTile() override {
 
-        delete frames;
+        delete[] frames;
     }
 };
 

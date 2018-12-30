@@ -9,15 +9,7 @@
 #include "Tile.h"
 #include "AnimeTile.h"
 
-class TileSet {
-/*private:
-
-    TextureRegion getTextureRegionFromGId(int gid) {
-        int y = (gid / columns);
-        int x = (gid % columns);
-        return TextureRegion((float) (x * tileWidth) / imageWidth, (float) (y * tileHeight) / imageHeight,
-                             (float) tileWidth / imageWidth, (float) tileHeight / imageHeight);
-    }*/
+class TileSet final{
 
 public:
 
@@ -37,29 +29,26 @@ public:
 
     Tile **const tiles;
 
-    TileSet(const char* pImage, const int tileCount, const int columns, const int tileHeight, const int tileWidth,
-            const int imageHeight, const int imageWidth, Tile **const tiles) : tileCount(tileCount),
-                                                                               columns(columns),
-                                                                               tileHeight(
-                                                                                       tileHeight),
-                                                                               tileWidth(tileWidth),
-                                                                               imageHeight(
-                                                                                       imageHeight),
-                                                                               imageWidth(
-                                                                                       imageWidth),
-                                                                               tiles(tiles) {
+    TileSet(const char* pImage, const int tileCount, const int columns,
+            const int tileHeight, const int tileWidth,
+            const int imageHeight, const int imageWidth,
+            Tile **const tiles) :
+            tileCount(tileCount), columns(columns),
+            tileHeight(tileHeight), tileWidth(tileWidth),
+            imageHeight(imageHeight), imageWidth(imageWidth),
+            tiles(tiles) {
+
         image = new char[strlen(pImage)];
         strcpy(image, pImage);
     }
 
-    virtual ~TileSet() {
-        delete image;
+    ~TileSet() {
 
-        for(int i=0;i<tileCount;i++) {
+        delete[] image;
 
+        for(int i = 0; i < tileCount; ++i)
             delete tiles[i];
-        }
-        delete tiles;
+        delete[] tiles;
     }
 };
 

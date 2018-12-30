@@ -9,16 +9,19 @@
 #include "MapLayer.h"
 #include "Tile.h"
 
-class TileLayer: public MapLayer {
+class TileLayer final: public MapLayer {
 
 public:
 
-    const int tileSetIndex;
+    Tile **const tiles;
 
-    Tile **tiles;
+    TileLayer(Tile **tiles, unsigned int tileSetIndex) :
+            MapLayer(TILE_LAYER, tileSetIndex), tiles(tiles){}
 
-    TileLayer(Tile **tiles, int tileSetIndex) : MapLayer(TILE_LAYER), tiles(tiles), tileSetIndex(tileSetIndex) {}
+    virtual ~TileLayer() override {
 
+        delete[] tiles;
+    }
 };
 
 

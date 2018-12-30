@@ -5,7 +5,6 @@
 #ifndef RPG2D_GAMESCREEN_H
 #define RPG2D_GAMESCREEN_H
 
-#include <math.h>
 
 #include "Screen.h"
 #include "Texture.h"
@@ -15,119 +14,82 @@
 #include "Vector.h"
 #include "World.h"
 #include "WorldRenderer.h"
+#include "EventListener.h"
+#include "GameStateBattle.h"
+#include "GameStateTransfer.h"
+#include "GameStateRunning.h"
 
-#define  LOGI(...)  __android_log_print(ANDROID_LOG_INFO,"GameScreen",__VA_ARGS__)
+class GameScreen : public Screen, public EventListener {
 
-class GameScreen: public Screen {
 private:
 
     World world;
+
     WorldRenderer *worldRenderer;
-    Texture *ui;
-    TextureRegion *pa, *pb;
+
     SpriteBatcher *spriteBatcher;
-
-    float controllerX = 150;
-    float controllerY = 570;
-    short controllerPointer = -1;
-
-    bool updateController(Touch event, Vector &vector){
-
-        const int LCtrlX = 150;
-        const int LCtrlY = 570;
-        const int maxR = 100;
-        const int minR = 25;
-        int dx = event.x - LCtrlX;
-        int dy = event.y - LCtrlY;
-        float length = (float) sqrt(dx * dx + dy * dy);
-        if (event.action == TOUCH_DOWN) {
-            if (length < maxR && controllerPointer == -1) {
-                controllerPointer = event.pointer;
-                controllerX = event.x;
-                controllerY = event.y;
-                if (length > minR) {
-                    vector.x = (float) dx / length;
-                    vector.y = (float) dy / length;
-                }
-                return true;
-            }
-        } else if (event.action == TOUCH_DRAGGED) {
-            if (event.pointer == controllerPointer) {
-                if(length > minR){
-                    vector.x = (float) dx / length;
-                    vector.y = (float) dy / length;
-                }else{
-                    vector.x = 0;
-                    vector.y = 0;
-                }
-                if(length < maxR){
-                    controllerX = event.x;
-                    controllerY = event.y;
-                }else{
-                    controllerX = LCtrlX + vector.x * maxR;
-                    controllerY = LCtrlY + vector.y * maxR;
-                }
-                return true;
-            }
-        } else if (event.action == TOUCH_UP) {
-            if (event.pointer == controllerPointer) {
-                controllerPointer = -1;
-                vector.x = 0;
-                vector.y = 0;
-                controllerX = 150;
-                controllerY = 570;
-                return true;
-            }
-        }
-        return false;
-    }
 
 public:
 
-    Vector v;
+    Screen *gameState;
 
-    GameScreen(JNIEnv *env) : Screen(env),v(0.f,0.f) {
+    GameScreen() : world(World(*this)) {
 
-        spriteBatcher = new SpriteBatcher(273*2+1);
-        ui = new Texture(env, "ui.png");
-        pa = new TextureRegion(0,0,(float)3*64/512,(float)3*64/512);
-        pb = new TextureRegion((float)(3 * 64)/512,0,(float)2.5*64/512,(float)2.5*64/512);
-        worldRenderer = new WorldRenderer(env, &world, spriteBatcher);
+        spriteBatcher = new SpriteBatcher(1024/*273*2+1*/);
+
+        worldRenderer = new WorldRenderer(&world, spriteBatcher);
+
+        gameState = new GameStateRunning(&world,spriteBatcher,this);
     }
 
     void resume() override {
 
-        worldRenderer->reload();
-        ui->reload();
     }
 
-    void update(float deltaTime, MultiTouchHandler* handler) override {
+    void update(float deltaTime, MultiTouchHandler *handler) override {
 
-        std::vector<Touch> touchEvents = handler->getTouchEvents();
+        gameState->update(deltaTime, handler);
+    }
 
-        for(Touch e : touchEvents) {
-            if(updateController(e, v))
-                world.setPlayerVelocity(v);
+    void present() override {
+
+        worldRenderer->render();
+
+        gameState->present();
+    }
+
+    virtual void onEvent(int what, int prop) override {
+        LOGI("onEvent(%d,%d)",what,prop);
+        world.setPlayerVelocity(Vector(0,0));
+
+        if(what == Event::RUNNING){
+            if(gameState)
+                delete gameState;
+            gameState = new GameStateRunning(&world,spriteBatcher,this);
+        }else if(what == Event::TRANSFER){
+            if(gameState)
+                delete gameState;
+            gameState = new GameStateTransfer(&world,spriteBatcher,this);
+        }else if(what == Event::BATTLE){
+            if(gameState)
+                delete gameState;
+            gameState = new GameStateBattle(&world,spriteBatcher,this,prop);
+        }else if(what == Event::ITEM){
+            // ... DO NOT delete gameState when encounter an item
+            // ItemID
+            if(prop == 1){
+                world.player.prop->agi += 10;
+            }
         }
-
-        world.update(deltaTime);
     }
 
-    void present(GLuint gvPositionHandle, GLuint gvCoordinateHandle) override {
+    virtual ~GameScreen() override {
 
-        worldRenderer->render(gvPositionHandle, gvCoordinateHandle);
-
-        //UI
-        spriteBatcher->beginBatch(ui);
-
-        //Draw Pad
-        spriteBatcher->drawSprite(54,474,192,192,*pa);
-        spriteBatcher->drawSprite(controllerX-80,controllerY-80,160,160,*pb);
-
-        spriteBatcher->endBatch(gvPositionHandle, gvCoordinateHandle);
+        delete spriteBatcher;
+        delete worldRenderer;
+        delete gameState;
     }
 };
 
-//glUniformMatrix4fv(gvMatrixHandle,1,GL_FALSE,glm::value_ptr(mMVPMatrix));
 
 #endif //RPG2D_GAMESCREEN_H

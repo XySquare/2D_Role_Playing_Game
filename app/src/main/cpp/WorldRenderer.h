@@ -8,6 +8,7 @@
 
 #include "World.h"
 #include "SpriteBatcher.h"
+#include "Assets.h"
 
 class WorldRenderer {
 
@@ -17,39 +18,12 @@ private:
 
     SpriteBatcher *spriteBatcher;
 
-    //Texture *mapTexture;
-
-    Texture *uiTexture;
-
-    Texture *playerTexture;
-
-    int tileSetCount;
-
-    Texture **tileSetTextures;
-
-    TextureRegion getObjTextureRegionFromIndex(int index) {
-        int y = (index / 2);
-        int x = (index % 2);
-        return TextureRegion((float) (x * 64) / 128.f, (float) (y * 64) / 128.f,
-                             (float) 64 / 128.f, (float) 64 / 128.f);
-    }
-
 public:
 
-    WorldRenderer(JNIEnv *env, World *world, SpriteBatcher *spriteBatcher) : world(world),
-                                                                             spriteBatcher(
-                                                                                     spriteBatcher) {
-        tileSetCount = world->map->tileSetsCount;
-        tileSetTextures = new Texture*[tileSetCount];
-        for(int i=0;i<tileSetCount;i++){
-            tileSetTextures[i] = new Texture(env, world->map->tileSets[i]->image);
-        }
-        //mapTexture = new Texture(env, "GoP_1.png");
-        uiTexture = new Texture(env, "obj.png");
-        playerTexture = new Texture(env, "player.png");
-    }
+    WorldRenderer(World *world, SpriteBatcher *spriteBatcher) : world(world),
+                                                                spriteBatcher(spriteBatcher) {}
 
-    void render(GLuint gvPositionHandle, GLuint gvCoordinateHandle, float offsetX, float offsetY) {
+    void render(float offsetX, float offsetY) {
 
         // Adjust offsets
         int mapWidth = world->map->width * world->map->tileWidth;
@@ -72,12 +46,12 @@ public:
         for (int i = 0; i < layerCount; i++) {
             MapLayer *mapLayer = world->map->layers[i];
 
-            if(mapLayer->getLayerType() == MapLayer::TILE_LAYER){
-                TileLayer *tileLayer = (TileLayer*)mapLayer;
+            TileSet *tileSet = world->map->tileSets[mapLayer->tileSetIndex];
 
-                TileSet *tileSet = world->map->tileSets[tileLayer->tileSetIndex];
+            spriteBatcher->beginBatch(Assets::tileSetTextures[mapLayer->tileSetIndex]);
 
-                spriteBatcher->beginBatch(tileSetTextures[tileLayer->tileSetIndex]);
+            if (mapLayer->layerType == MapLayer::TILE_LAYER) {
+                TileLayer *tileLayer = (TileLayer *) mapLayer;
 
                 Tile **tiles = tileLayer->tiles;
 
@@ -90,59 +64,84 @@ public:
                 for (int y = startIndexY; y < startIndexY + 13 && y < height; y++) {
                     for (int x = startIndexX; x < startIndexX + 21 && x < width; x++) {
                         Tile *tile = tiles[y * width + x];
-                        if(tile){
+                        if (tile) {
                             int gid = tile->getGId(world->timer);
                             int y2 = (gid / tileSet->columns);
                             int x1 = (gid % tileSet->columns);
-                            spriteBatcher->drawSprite(x * world->map->tileWidth + offsetX, y * world->map->tileHeight + offsetY, world->map->tileWidth, world->map->tileHeight,
-                                                      TextureRegion((float) (x1 * tileSet->tileWidth) / tileSet->imageWidth, (float) (y2 * tileSet->tileHeight) / tileSet->imageHeight,
-                                                                           (float) tileSet->tileWidth / tileSet->imageWidth, (float) tileSet->tileHeight / tileSet->imageHeight));
+                            spriteBatcher->drawSprite(x * world->map->tileWidth + offsetX,
+                                                      y * world->map->tileHeight + offsetY,
+                                                      world->map->tileWidth, world->map->tileHeight,
+                                                      TextureRegion(
+                                                              (float) (x1 * tileSet->tileWidth) /
+                                                              tileSet->imageWidth,
+                                                              (float) (y2 * tileSet->tileHeight) /
+                                                              tileSet->imageHeight,
+                                                              (float) tileSet->tileWidth /
+                                                              tileSet->imageWidth,
+                                                              (float) tileSet->tileHeight /
+                                                              tileSet->imageHeight));
                         }
                     }
                 }
+            } else if (mapLayer->layerType == MapLayer::OBJECT_LAYER) {
+                ObjectLayer *objectLayer = (ObjectLayer *) mapLayer;
 
-                spriteBatcher->endBatch(gvPositionHandle, gvCoordinateHandle);
+                for (int j = 0; j < objectLayer->objectCount; j++) {
+                    MapObject *object = objectLayer->objects[j];
+                    Tile *tile = object->tile;
+                    if (tile) {
+                        int index = tile->getGId(world->timer);
+                        int y2 = (index / tileSet->columns);
+                        int x1 = (index % tileSet->columns);
+                        spriteBatcher->drawSprite(object->position.x + offsetX,
+                                                  object->position.y + offsetY, object->width,
+                                                  object->height,
+                                                  TextureRegion((float) (x1 * tileSet->tileWidth) /
+                                                                tileSet->imageWidth,
+                                                                (float) (y2 * tileSet->tileHeight) /
+                                                                tileSet->imageHeight,
+                                                                (float) tileSet->tileWidth /
+                                                                tileSet->imageWidth,
+                                                                (float) tileSet->tileHeight /
+                                                                tileSet->imageHeight));
+                    }
+                }
             }
+
+            spriteBatcher->endBatch();
         }
 
         // Draw Objects
-        spriteBatcher->beginBatch(uiTexture);
+        /*spriteBatcher->beginBatch(uiTexture);
 
         for(MapObject object:world->map->objects){
             spriteBatcher->drawSprite(object.position.x + offsetX, object.position.y + offsetY, 64, 64,
                                       getObjTextureRegionFromIndex(object.gid));
         }
 
-        spriteBatcher->endBatch(gvPositionHandle, gvCoordinateHandle);
+        spriteBatcher->endBatch(gvPositionHandle, gvCoordinateHandle);*/
 
-        spriteBatcher->beginBatch(playerTexture);
+        spriteBatcher->beginBatch(Assets::player);
 
         //Draw Player
-        int frame = ((int)(world->player.stateTime/0.125f))%4;
-        float x = frame*90/512.f;
-        float y = (world->player.state - 1)*120/512.f;
-        TextureRegion playerRegine(x,y,90/512.f,120/512.f);
-        spriteBatcher->drawSprite(world->player.position.x + offsetX - (90 - Player::PLAYER_WIDTH)/2,
-                                  world->player.position.y + offsetY - (120 - Player::PLAYER_HEIGHT), 90, 120,
-                                  playerRegine);
+        int frame = ((int) (world->player.stateTime / 0.125f)) % 4;
+        float x = frame * 90 / 512.f;
+        float y = (world->player.state) * 120 / 512.f;
+        TextureRegion playerRegine(x, y, 90 / 512.f, 120 / 512.f);
+        spriteBatcher->drawSprite(
+                world->player.position.x + offsetX - (90 - Player::PLAYER_WIDTH) / 2,
+                world->player.position.y + offsetY - (120 - Player::PLAYER_HEIGHT), 90, 120,
+                playerRegine);
 
-        spriteBatcher->endBatch(gvPositionHandle, gvCoordinateHandle);
+        spriteBatcher->endBatch();
     }
 
-    void render(GLuint gvPositionHandle, GLuint gvCoordinateHandle) {
+    void render() {
 
-        float offsetX = 640 - world->player.position.x - Player::PLAYER_WIDTH/2;
-        float offsetY = 360 - world->player.position.y - Player::PLAYER_HEIGHT/2;
+        float offsetX = 640 - world->player.position.x - Player::PLAYER_WIDTH / 2;
+        float offsetY = 360 - world->player.position.y - Player::PLAYER_HEIGHT / 2;
 
-        render(gvPositionHandle, gvCoordinateHandle, offsetX, offsetY);
-    }
-
-    void reload() {
-        uiTexture->reload();
-        playerTexture->reload();
-        for(int i=0;i<tileSetCount;i++){
-            tileSetTextures[i]->reload();
-        }
+        render(offsetX, offsetY);
     }
 };
 

@@ -6,21 +6,21 @@
 #define RPG2D_SCREEN_H
 
 
-#include <jni.h>
 #include "MultiTouchHandler.h"
 
 class Screen {
-protected:
-    JNIEnv *const env;
-public:
 
-    Screen(JNIEnv *env) : env(env) {}
+public:
 
     virtual void resume() = 0;
 
     virtual void update(float deltaTime, MultiTouchHandler *handler) = 0;
 
-    virtual void present(GLuint gvPositionHandle, GLuint gvCoordinateHandle) = 0;
+    virtual void present() = 0;
+
+    virtual ~Screen() {
+
+    }
 };
 
 

@@ -10,18 +10,21 @@ class MapLayer {
 
 public:
 
-    static const int TILE_LAYER = 0;
-
-    static const int OBJECT_LAYER = 1;
-
-    const char layerType;
-
-    MapLayer(const char layerType) : layerType(layerType) {}
-
-    int getLayerType(){
-
-        return layerType;
+    enum {
+        TILE_LAYER = 0,
+        OBJECT_LAYER
     };
+
+    const unsigned char layerType;
+
+    const unsigned int tileSetIndex;
+
+    MapLayer(const unsigned char layerType, const unsigned int tileSetIndex) :
+            layerType(layerType), tileSetIndex(tileSetIndex) {}
+
+    virtual ~MapLayer(){
+
+    }
 };
 
 

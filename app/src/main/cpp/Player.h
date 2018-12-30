@@ -7,6 +7,7 @@
 
 
 #include "DynamicGameObject.h"
+#include "Property.h"
 
 
 //const float Player::PLAYER_VELOCITY = 360.f;
@@ -18,23 +19,27 @@ private:
 
 public:
 
-    static const int PLAYER_STATE_DOWN = 1;
-
-    static const int PLAYER_STATE_LEFT = 2;
-
-    static const int PLAYER_STATE_UP = 3;
-
-    static const int PLAYER_STATE_RIGHT = 4;
+    enum State: unsigned char {
+        PLAYER_STATE_DOWN = 0,
+        PLAYER_STATE_LEFT,
+        PLAYER_STATE_UP,
+        PLAYER_STATE_RIGHT
+    };
 
     static const int PLAYER_WIDTH = 62;
 
     static const int PLAYER_HEIGHT = 32;
 
-    int state = PLAYER_STATE_DOWN;
+    State state = PLAYER_STATE_DOWN;
 
     float stateTime = 0;
 
-    Player(float x, float y) : DynamicGameObject(x, y) {}
+    Property *prop;
+
+    Player(float x, float y) : DynamicGameObject(x, y) {
+
+        prop = new Property(10,2,1,1);
+    }
 
     void update(float deltaTime) {
 
@@ -54,6 +59,11 @@ public:
         }else{
             stateTime = 0;
         }
+    }
+
+    virtual ~Player() {
+
+        delete prop;
     }
 };
 

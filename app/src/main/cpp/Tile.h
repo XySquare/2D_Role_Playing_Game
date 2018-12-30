@@ -10,6 +10,7 @@ class Tile {
 
 protected:
 
+    // This field serve as the Gid of Tile, but serve as the frameLength of AnimeTile
     const int gid;
 
 public:
@@ -20,6 +21,10 @@ public:
 
         return gid;
     };
+
+    virtual ~Tile() {
+
+    }
 };
 
 
