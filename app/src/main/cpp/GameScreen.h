@@ -9,7 +9,6 @@
 #include "Screen.h"
 #include "Texture.h"
 #include "Vertex.h"
-#include "MultiTouchHandler.h"
 #include "SpriteBatcher.h"
 #include "Vector.h"
 #include "World.h"
@@ -18,12 +17,14 @@
 #include "GameStateBattle.h"
 #include "GameStateTransfer.h"
 #include "GameStateRunning.h"
+#include "GameStatePause.h"
+#include "GameStateShop.h"
 
-class GameScreen : public Screen, public EventListener {
+class GameScreen : public Screen {
 
 private:
 
-    World world;
+    World *world;
 
     WorldRenderer *worldRenderer;
 
@@ -33,22 +34,26 @@ public:
 
     Screen *gameState;
 
-    GameScreen() : world(World(*this)) {
+    GameScreen(Game game) : Screen(game) {
 
-        spriteBatcher = new SpriteBatcher(1024/*273*2+1*/);
+        world = new World(this);
 
-        worldRenderer = new WorldRenderer(&world, spriteBatcher);
+        spriteBatcher = new SpriteBatcher(1024);
 
-        gameState = new GameStateRunning(&world,spriteBatcher,this);
+        worldRenderer = new WorldRenderer(world, spriteBatcher);
+
+        gameState = new GameStateRunning(game, world, spriteBatcher, this);
+
+        world->loading(game.fileIO);
     }
 
     void resume() override {
 
     }
 
-    void update(float deltaTime, MultiTouchHandler *handler) override {
+    void update(float deltaTime) override {
 
-        gameState->update(deltaTime, handler);
+        gameState->update(deltaTime);
     }
 
     void present() override {
@@ -60,31 +65,38 @@ public:
 
     virtual void onEvent(int what, int prop) override {
         LOGI("onEvent(%d,%d)",what,prop);
-        world.setPlayerVelocity(Vector(0,0));
+        world->setPlayerVelocity(Vector(0,0));
 
         if(what == Event::RUNNING){
-            if(gameState)
-                delete gameState;
-            gameState = new GameStateRunning(&world,spriteBatcher,this);
+            delete gameState;
+            gameState = new GameStateRunning(game, world, spriteBatcher, this);
         }else if(what == Event::TRANSFER){
-            if(gameState)
-                delete gameState;
-            gameState = new GameStateTransfer(&world,spriteBatcher,this);
+            delete gameState;
+            gameState = new GameStateTransfer(game, world, spriteBatcher, this);
         }else if(what == Event::BATTLE){
-            if(gameState)
-                delete gameState;
-            gameState = new GameStateBattle(&world,spriteBatcher,this,prop);
+            delete gameState;
+            gameState = new GameStateBattle(game, world, spriteBatcher, this, prop);
+        }else if(what == Event::PAUSE){
+            delete gameState;
+            gameState = new GameStatePause(game, world, spriteBatcher, this);
         }else if(what == Event::ITEM){
             // ... DO NOT delete gameState when encounter an item
             // ItemID
             if(prop == 1){
-                world.player.prop->agi += 10;
+                //world.player.prop->agi += 10;
+                world->bag->key[0]++;
             }
+        }else if(what == Event::SHOP){
+            delete gameState;
+            gameState = new GameStateShop(game, world, spriteBatcher, this);
+        }else{
+            gameState->onEvent(what, prop);
         }
     }
 
     virtual ~GameScreen() override {
 
+        delete world;
         delete spriteBatcher;
         delete worldRenderer;
         delete gameState;

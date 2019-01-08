@@ -6,15 +6,14 @@
 #define RPG2D_EVENTLISTENER_H
 
 
-class Event{
-
-public:
-    enum{
-        RUNNING,
-        TRANSFER,
-        ITEM,
-        BATTLE
-    };
+enum Event: unsigned char {
+    RUNNING,
+    TRANSFER,
+    ITEM,
+    BATTLE,
+    DOOR,
+    PAUSE,
+    SHOP
 };
 
 class EventListener {

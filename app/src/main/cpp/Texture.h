@@ -8,24 +8,25 @@
 
 #include <jni.h>
 #include <GLES2/gl2.h>
+#include <string>
 
 class Texture {
 
 private:
 
     JNIEnv *const env;
-    const char* fileName;
+    std::string fileName;
     GLuint textureId;
 
 public:
 
-    Texture(JNIEnv *const env, const char *fileName) : env(env), fileName(fileName) {}
+    Texture(JNIEnv *const env, std::string fileName) : env(env), fileName(fileName) {}
 
     void load() {
 
         jclass cls = env->FindClass("xyy/game/rpg2d/AssetsLoader");
         jmethodID mId = env->GetStaticMethodID(cls,"load","(Ljava/lang/String;)I"); // Don't forget ';'
-        jstring jstr = env->NewStringUTF(fileName);
+        jstring jstr = env->NewStringUTF(fileName.c_str());
         textureId = (GLuint)(env->CallStaticIntMethod(cls,mId,jstr));
     }
 

@@ -7,7 +7,6 @@
 
 
 #include "rapidjson/document.h"
-#include "JsonFiles.h"
 #include "Map.h"
 #include "TileLayer.h"
 #include "ObjectLayer.h"
@@ -21,296 +20,300 @@ class MapLoader {
 
 private:
 
-    const char *read(const char *fileName) {
-        using namespace rpg;
-        if (strcmp(fileName, "tiled_map00.json") == 0)
-            return tiled_map00;
-        if (strcmp(fileName, "tiled_map01.json") == 0)
-            return tiled_map01;
-        if (strcmp(fileName, "GoP_1.json") == 0)
-            return GoP_1;
-        if (strcmp(fileName, "GoP_6.json") == 0)
-            return GoP_6;
-        if (strcmp(fileName, "obj.json") == 0)
-            return obj;
-        if (strcmp(fileName, "monster.json") == 0)
-            return monster;
-        LOGI("File Not Found: %s", fileName);
-        return NULL;
+    /**
+     * The string returned should be delete []
+     */
+    const char *read(FileIO *fileIO, const char *fileName) {
+
+        AAsset* file = fileIO->readAssetFile(fileName);
+        size_t fileLength = static_cast<size_t>(AAsset_getLength(file));
+        // Allocate memory to read file
+        char* fileContent = new char[fileLength+1];
+        AAsset_read(file, fileContent, fileLength);
+        AAsset_close(file);
+        fileContent[fileLength] = '\0';
+        return fileContent;
     }
 
-    int
-    findTileSet(rapidjson::Value &data, int dataCount, int *tileSetsFirstGid, int tileSetsCount) {
+    unsigned char
+    findTileSet(rapidjson::Value &data, unsigned int dataCount, unsigned int *tileSetsFirstGid,
+                unsigned char tileSetsCount) {
 
         // Find a gid > 0
-        int gid = 0;
-        for (int j = 0; j < dataCount; j++) {
-            gid = data[j].GetInt();
+        unsigned int gid = 0;
+        for (unsigned int j = 0; j < dataCount; j++) {
+            gid = static_cast<unsigned int>(data[j].GetInt());
             if (gid > 0) {
                 break;
             }
         }
-        int i;
+        unsigned char i;
         for (i = 0; i < tileSetsCount && gid >= tileSetsFirstGid[i]; i++);
-        return i - 1;
+        assert(i > 0);
+        return static_cast<unsigned char>(i - 1);
     }
 
-    int findTileSet(int gid, int *tileSetsFirstGid, int tileSetsCount) {
+    unsigned char
+    findTileSet(unsigned int gid, unsigned int *tileSetsFirstGid, unsigned char tileSetsCount) {
 
-        int i;
+        unsigned char i;
         for (i = 0; i < tileSetsCount && gid >= tileSetsFirstGid[i]; i++);
-        return i - 1;
+        return static_cast<unsigned char>(i - 1);
     }
 
 public:
 
-    Map *loadMap(const char *fileName) {
+    Map *loadMap(FileIO *fileIO, const char *fileName) {
         using namespace rapidjson;
         LOGI("World Loading...%s.", fileName);
 
-        const char *mapData = read(fileName);
+        const char *mapData = read(fileIO, fileName);
 
         Document mapObj;
         mapObj.Parse(mapData);
 
-        int width = mapObj["width"].GetInt();
+        delete[] mapData;
 
-        int height = mapObj["height"].GetInt();
+        unsigned int width = static_cast<unsigned int>(mapObj["width"].GetInt());
 
-        int tileHeight = mapObj["tileheight"].GetInt();
+        unsigned int height = static_cast<unsigned int>(mapObj["height"].GetInt());
 
-        int tileWidth = mapObj["tilewidth"].GetInt();
+        unsigned int tileHeight = static_cast<unsigned int>(mapObj["tileheight"].GetInt());
+
+        unsigned int tileWidth = static_cast<unsigned int>(mapObj["tilewidth"].GetInt());
 
         /**
          * Parse TileSets
          */
 
-        Value &tileSetsAry = mapObj["tilesets"];
+        Value &tileSetAry = mapObj["tilesets"];
 
-        SizeType tileSetCount = tileSetsAry.Size();
+        unsigned char tileSetCount = static_cast<unsigned char>(tileSetAry.Size());
 
-        int *tileSetsFirstGid = new int[tileSetCount];
+        unsigned int *tileSetFirstGids = new unsigned int[tileSetCount];
 
         TileSet **tileSets = new TileSet *[tileSetCount];
 
-        for (SizeType i = 0; i < tileSetCount; i++) {
+        for (unsigned char i = 0; i < tileSetCount; i++) {
 
-            int firstgid = tileSetsAry[i]["firstgid"].GetInt();
-            tileSetsFirstGid[i] = firstgid;
-            const char *source = tileSetsAry[i]["source"].GetString();
-            tileSets[i] = loadTileSet(source);
+            tileSetFirstGids[i] = static_cast<unsigned int>(tileSetAry[i]["firstgid"].GetInt());
+            tileSets[i] = loadTileSet(fileIO, tileSetAry[i]["source"].GetString());
         }
 
         /**
          * Parse Map Layers
          */
 
-        int tileLayerCount = 0;
+        unsigned char layerCount = 0;
 
-        int *collisionLayer = NULL;
+        unsigned char *collisionLayer = NULL;
 
-        Value &layersAry = mapObj["layers"];
+        Value &layerAry = mapObj["layers"];
 
-        SizeType layerCount = layersAry.Size();
+        SizeType layerArySize = layerAry.Size();
 
-        MapLayer **mapLayersTemp = new MapLayer *[layerCount];
+        MapLayer **mapLayersTemp = new MapLayer *[layerArySize];
 
-        for (int i = 0; i < layerCount; i++) {
+        for (unsigned char i = 0; i < layerArySize; i++) {
 
-            Value &layerObj = layersAry[i];
+            Value &layerObj = layerAry[i];
+
+            const unsigned char layerId = static_cast<const unsigned char>(layerObj["id"].GetInt());
 
             const char *type = layerObj["type"].GetString();
-
-            LOGI("Layer...%s.", type);
 
             // TileLayer
             if (strcmp(type, "tilelayer") == 0) {
 
-                Value &data = layerObj["data"];
+                Value &dataAry = layerObj["data"];
 
-                SizeType dataCount = data.Size();
+                SizeType dataCount = dataAry.Size();
 
-                const char *name = layerObj["name"].GetString();
+                const char *layerName = layerObj["name"].GetString();
 
-                if (strcmp(name, "collisionLayer") == 0) {
+                if (strcmp(layerName, "collisionLayer") == 0) {
 
-                    collisionLayer = new int[dataCount];
-                    for (int j = 0; j < dataCount; j++) {
+                    collisionLayer = new unsigned char[dataCount];
+                    for (SizeType j = 0; j < dataCount; j++) {
 
-                        collisionLayer[j] = data[j].GetInt();
+                        collisionLayer[j] = static_cast<unsigned char>(dataAry[j].GetInt());
                     }
                 } else {
 
                     //Determine which TileSet this layer will use
-                    int tileSetInedx = findTileSet(data, dataCount, tileSetsFirstGid, tileSetCount);
-                    if (tileSetInedx >= 0) {
+                    unsigned char tileSetInedx = findTileSet(dataAry, dataCount, tileSetFirstGids,
+                                                             tileSetCount);
 
-                        TileSet *tileSet = tileSets[tileSetInedx];
-                        int firstGid = tileSetsFirstGid[tileSetInedx];
+                    TileSet *tileSet = tileSets[tileSetInedx];
+                    unsigned int firstGid = tileSetFirstGids[tileSetInedx];
 
-                        Tile **tiles = new Tile *[dataCount];
-                        for (int j = 0; j < dataCount; j++) {
-                            int gid = data[j].GetInt();
-                            if (gid > 0)
-                                tiles[j] = tileSet->tiles[gid - firstGid];
-                            else
-                                tiles[j] = NULL;
-                        }
-                        mapLayersTemp[tileLayerCount] = new TileLayer(tiles, tileSetInedx);
-                        tileLayerCount++;
+                    Tile **tiles = new Tile *[dataCount];
+                    for (unsigned int j = 0; j < dataCount; j++) {
+                        unsigned int gid = static_cast<unsigned int>(dataAry[j].GetInt());
+                        if (gid > 0)
+                            tiles[j] = tileSet->tiles[gid - firstGid];
+                        else
+                            tiles[j] = NULL;
                     }
+
+                    mapLayersTemp[layerCount++] = new TileLayer(layerId, tiles, tileSetInedx);
                 }
             }
-                // ObjectLayer
+            // ObjectLayer
             else if (strcmp(type, "objectgroup") == 0) {
 
-                Value &objects = layerObj["objects"];
+                Value &objectAry = layerObj["objects"];
 
-                SizeType objectCount = objects.Size();
+                SizeType objectAryCount = objectAry.Size();
 
                 //Determine which TileSet this layer will use
-                int tileSetInedx = -1;
+                // Note: It's possible that no TileSet will be used in ObjectLayer
+                // When all objects are invisible
+                unsigned char tileSetInedx = 0;
 
-                for (int j = 0; j < objectCount; j++) {
+                for (unsigned int j = 0; j < objectAryCount; j++) {
 
-                    Value &object = objects[j];
+                    Value &objectObj = objectAry[j];
 
-                    if (object.HasMember("gid")) {
-                        int gid = object["gid"].GetInt();
+                    if (objectObj.HasMember("gid")) {
 
-                        tileSetInedx = findTileSet(gid, tileSetsFirstGid, tileSetCount);
+                        unsigned int gid = static_cast<unsigned int>(objectObj["gid"].GetInt());
+                        tileSetInedx = findTileSet(gid, tileSetFirstGids, tileSetCount);
                     }
                 }
 
                 TileSet *tileSet = tileSets[tileSetInedx];
 
-                int firstGid = tileSetsFirstGid[tileSetInedx];
+                unsigned int firstGid = tileSetFirstGids[tileSetInedx];
 
-                MapObject **mapObjectTemp = new MapObject *[objectCount];
+                MapObject **mapObjectsTemp = new MapObject *[objectAryCount];
 
-                int mapObjectCount = 0;
+                unsigned int objectCount = 0;
 
-                for (int j = 0; j < objectCount; j++) {
+                for (unsigned int j = 0; j < objectAryCount; j++) {
 
-                    Value &object = objects[j];
+                    Value &objectObj = objectAry[j];
 
-                    // Tile Object
-                    if (object.HasMember("gid")) {
-                        int id = object["id"].GetInt();
-                        const char *objType = object["type"].GetString();
-                        const char *objName = object["name"].GetString();
-                        int objWidth = object["width"].GetInt();
-                        int objHeight = object["height"].GetInt();
-                        int x = object["x"].GetInt();
-                        // Fix position
-                        int y = object["y"].GetInt() - objHeight;
-                        int gid = object["gid"].GetInt();
-                        Value::ConstMemberIterator itr = object.FindMember("properties");
-                        if (itr != object.MemberEnd()) {
-                            const Value &properties = itr->value;
-                            SizeType propertyCount = properties.Size();
-                            if (propertyCount > 0) {
-                                const Value &prop = properties[0];
-                                int intProperty = prop["value"].GetInt();
-                                mapObjectTemp[mapObjectCount] = new MapObject(id, x, y, objType,
-                                                                              objName, objWidth,
-                                                                              objHeight,
-                                                                              tileSet->tiles[gid -
-                                                                                             firstGid],
-                                                                              intProperty);
-                                mapObjectCount++;
-                            } else {
-                                // W/Properties Length = 0
-                                LOGI("Properties Length = 0");
+                    // Polygon (Not supported)
+                    if (objectObj.HasMember("polyline")) {
+                        continue;
+                    }
+                        // Ellipse (Not supported)
+                    else if (objectObj.HasMember("ellipse")) {
+                        continue;
+                    }
+
+                    unsigned int objId = static_cast<unsigned int>(objectObj["id"].GetInt());
+                    const char *objType = objectObj["type"].GetString();
+                    const char *objName = objectObj["name"].GetString();
+                    unsigned int objWidth = static_cast<unsigned int>(objectObj["width"].GetInt());
+                    unsigned int objHeight = static_cast<unsigned int>(objectObj["height"].GetInt());
+                    int x = objectObj["x"].GetInt();
+                    int y = objectObj["y"].GetInt();
+                    Tile *tile = NULL;
+                    Value::ConstMemberIterator itr = objectObj.FindMember("properties");
+                    unsigned char propertyCount = 0;
+                    ObjectProperty **objectProperties = NULL;
+                    if (itr != objectObj.MemberEnd()) {
+                        const Value &properties = itr->value;
+                        propertyCount = static_cast<unsigned char>(properties.Size());
+                        if (propertyCount > 0) {
+                            objectProperties = new ObjectProperty *[propertyCount];
+                            for (unsigned char k = 0; k < propertyCount; k++) {
+                                const Value &prop = properties[k];
+                                const char *propertyName = prop["name"].GetString();
+                                const char *propertyType = prop["type"].GetString();
+                                if (strcmp(propertyType, "int") == 0) {
+                                    objectProperties[k] = new IntProperty(propertyName,
+                                                                          prop["value"].GetInt());
+                                } else if (strcmp(propertyType, "string") == 0) {
+                                    objectProperties[k] = new StringProperty(propertyName,
+                                                                             prop["value"].GetString());
+                                } else {
+                                    LOGI("Unsupported DataType.");
+                                }
                             }
-                        } else {
-                            mapObjectTemp[mapObjectCount] = new MapObject(id, x, y, objType,
-                                                                          objName, objWidth,
-                                                                          objHeight,
-                                                                          tileSet->tiles[gid -
-                                                                                         firstGid]);
-                            mapObjectCount++;
                         }
                     }
-                        // Polygon
-                    else if (object.HasMember("polyline")) {
 
-                    }
-                        // Ellipse
-                    else if (object.HasMember("ellipse")) {
+                    // Tile Object
+                    if (objectObj.HasMember("gid")) {
 
-                    }
-                        // Rectangle
-                    else {
-                        int id = object["id"].GetInt();
-                        int objWidth = object["width"].GetInt();
-                        int objHeight = object["height"].GetInt();
-                        int x = object["x"].GetInt();
-                        int y = object["y"].GetInt();
+                        // Fix position
+                        y -= objHeight;
 
-                        mapObjectTemp[mapObjectCount] = new MapObject(id, x, y, objWidth,
-                                                                      objHeight, NULL);
-                        mapObjectCount++;
+                        unsigned int gid = static_cast<unsigned int>(objectObj["gid"].GetInt());
+                        tile = tileSet->tiles[gid - firstGid];
                     }
+
+                    mapObjectsTemp[objectCount++] = new MapObject(objId, x, y,
+                                                                objType, objName,
+                                                                objWidth, objHeight,
+                                                                tile,
+                                                                propertyCount,
+                                                                objectProperties);
                 }
 
                 // Copy objects
-                MapObject **mapObjects = new MapObject *[mapObjectCount];
-                for (int j = 0; j < mapObjectCount; j++) {
-                    mapObjects[j] = mapObjectTemp[j];
+                MapObject **mapObjects = new MapObject *[objectCount];
+                for (int j = 0; j < objectCount; j++) {
+                    mapObjects[j] = mapObjectsTemp[j];
                 }
-                delete[] mapObjectTemp;
+                delete[] mapObjectsTemp;
 
-                LOGI("Object Count:%d", mapObjectCount);
+                LOGI("Object Count:%d", objectCount);
 
-                mapLayersTemp[tileLayerCount] = new ObjectLayer(mapObjectCount, mapObjects,
-                                                                tileSetInedx);
-                tileLayerCount++;
+                mapLayersTemp[layerCount++] = new ObjectLayer(layerId, objectCount, mapObjects,
+                                                            tileSetInedx);
             }
         }
 
         // Copy layers
-        MapLayer **mapLayers = new MapLayer *[tileLayerCount];
-        for (int i = 0; i < tileLayerCount; i++) {
+        MapLayer **mapLayers = new MapLayer *[layerCount];
+        for (int i = 0; i < layerCount; i++) {
             mapLayers[i] = mapLayersTemp[i];
         }
         delete[] mapLayersTemp;
 
-        delete[] tileSetsFirstGid;
+        delete[] tileSetFirstGids;
 
         LOGI("Map Loaded.");
 
         return new Map(tileSetCount, tileSets, width, height, tileWidth, tileHeight, collisionLayer,
-                       tileLayerCount, mapLayers);
+                       layerCount, mapLayers);
     }
 
-    TileSet *loadTileSet(const char *fileName) {
+    TileSet *loadTileSet(FileIO *fileIO, const char *fileName) {
         using namespace rapidjson;
 
         LOGI("TileSet Loading...%s.", fileName);
 
-        const char *tileSetData = read(fileName);
+        const char *tileSetData = read(fileIO, fileName);
+
+        LOGI("TileSet Data = %s.", tileSetData);
 
         Document tileSetObj;
         tileSetObj.Parse(tileSetData);
 
+        delete[] tileSetData;
+
         const char *image = tileSetObj["image"].GetString();
 
-        int tileCount = tileSetObj["tilecount"].GetInt();
+        unsigned int tileCount = static_cast<unsigned int>(tileSetObj["tilecount"].GetInt());
 
-        int columns = tileSetObj["columns"].GetInt();
+        unsigned int columns = static_cast<unsigned int>(tileSetObj["columns"].GetInt());
 
-        int tileHeight = tileSetObj["tileheight"].GetInt();
+        unsigned int tileHeight = static_cast<unsigned int>(tileSetObj["tileheight"].GetInt());
 
-        int tileWidth = tileSetObj["tilewidth"].GetInt();
+        unsigned int tileWidth = static_cast<unsigned int>(tileSetObj["tilewidth"].GetInt());
 
-        int imageHeight = tileSetObj["imageheight"].GetInt();
+        unsigned int imageHeight = static_cast<unsigned int>(tileSetObj["imageheight"].GetInt());
 
-        int imageWidth = tileSetObj["imagewidth"].GetInt();
+        unsigned int imageWidth = static_cast<unsigned int>(tileSetObj["imagewidth"].GetInt());
 
         Tile **const tiles = new Tile *[tileCount];
 
-        int tileId = 0;
+        unsigned int tileId = 0;
 
         if (tileSetObj.HasMember("tiles")) {
 
@@ -325,7 +328,7 @@ public:
                 if (!tileObj.HasMember("animation"))
                     continue;
 
-                int id = tileObj["id"].GetInt();
+                unsigned int id = static_cast<unsigned int>(tileObj["id"].GetInt());
 
                 while (tileId < id) {
                     tiles[tileId] = new Tile(tileId);
@@ -336,17 +339,16 @@ public:
 
                 SizeType animationCount = animation.Size();
 
+                // Although Tiled supports vary ramerate, here just pick the first one
                 float duration = animation[0]["duration"].GetInt() / 1000.f;
 
-                int *frames = new int[animationCount];
+                unsigned int *frames = new unsigned int[animationCount];
 
-                for (int f = 0; f < animationCount; f++) {
-                    frames[f] = animation[f]["tileid"].GetInt();
+                for (unsigned int f = 0; f < animationCount; f++) {
+                    frames[f] = static_cast<unsigned int>(animation[f]["tileid"].GetInt());
                 }
 
-                tiles[tileId] = new AnimeTile(duration, animationCount, frames);
-
-                tileId++;
+                tiles[tileId++] = new AnimeTile(duration, animationCount, frames);
             }
         }
 

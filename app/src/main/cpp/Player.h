@@ -38,7 +38,7 @@ public:
 
     Player(float x, float y) : DynamicGameObject(x, y) {
 
-        prop = new Property(10,2,1,1);
+        prop = new Property(99999,999,999,999);
     }
 
     void update(float deltaTime) {

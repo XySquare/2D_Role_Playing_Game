@@ -20,13 +20,13 @@ import xyy.game.rpg2d.framework.*;
 public final class AndroidAudio implements Audio {
     private final AssetManager assets;
     private final SoundPool soundPool;
-    private final FileIO mFileIO;
+    //private final FileIO mFileIO;
 
-    AndroidAudio(Activity activity, FileIO fileIO) {
+    AndroidAudio(Activity activity/*, FileIO fileIO*/) {
         //设置媒体流的音量控制
         activity.setVolumeControlStream(AudioManager.STREAM_MUSIC);
         this.assets = activity.getAssets();
-        this.mFileIO = fileIO;
+        //this.mFileIO = fileIO;
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
             //This constructor was deprecated in API level 21.
@@ -44,7 +44,7 @@ public final class AndroidAudio implements Audio {
     @Override
     @Nullable
     public Music newMusic(String filename) {
-        try {
+        /*try {
             //AssetFileDescriptor assetDescriptor = assets.openFd(filename);
             return new AndroidMusic((FileInputStream) mFileIO.readFile(filename));
         } catch (IOException e) {
@@ -52,7 +52,8 @@ public final class AndroidAudio implements Audio {
             //该错误无法恢复，因此以RuntimeException代替IOException抛出
             //Log.e("AndroidAudio","Couldn't load music '" + filename + "'");
             return null;
-        }
+        }*/
+        return null;
     }
 
     @Override

@@ -13,40 +13,35 @@ class TileSet final{
 
 public:
 
-    char *image;
+    std::string image;
 
-    const int tileCount;
+    const unsigned int tileCount;
 
-    const int columns;
+    const unsigned int columns;
 
-    const int tileHeight;
+    const unsigned int tileHeight;
 
-    const int tileWidth;
+    const unsigned int tileWidth;
 
-    const int imageHeight;
+    const unsigned int imageHeight;
 
-    const int imageWidth;
+    const unsigned int imageWidth;
 
     Tile **const tiles;
 
-    TileSet(const char* pImage, const int tileCount, const int columns,
-            const int tileHeight, const int tileWidth,
-            const int imageHeight, const int imageWidth,
+    TileSet(const char* image, const unsigned int tileCount, const unsigned int columns,
+            const unsigned int tileHeight, const unsigned int tileWidth,
+            const unsigned int imageHeight, const unsigned int imageWidth,
             Tile **const tiles) :
+            image(image),
             tileCount(tileCount), columns(columns),
             tileHeight(tileHeight), tileWidth(tileWidth),
             imageHeight(imageHeight), imageWidth(imageWidth),
-            tiles(tiles) {
-
-        image = new char[strlen(pImage)];
-        strcpy(image, pImage);
-    }
+            tiles(tiles) {}
 
     ~TileSet() {
 
-        delete[] image;
-
-        for(int i = 0; i < tileCount; ++i)
+        for(unsigned int i = 0; i < tileCount; ++i)
             delete tiles[i];
         delete[] tiles;
     }

@@ -9,7 +9,7 @@
 #include <mutex>
 #include <vector>
 
-enum Action {
+enum Action : unsigned char {
     TOUCH_DOWN = 0,
     TOUCH_UP,
     TOUCH_DRAGGED
@@ -17,8 +17,8 @@ enum Action {
 
 struct Touch{
 
-    short pointer;
-    short action;
+    unsigned char pointer;
+    Action action;
     short x;
     short y;
 };
@@ -40,7 +40,10 @@ public:
         syn.unlock();
     }
 
-    std::vector<Touch> getTouchEvents(){
+    /**
+     * Remember to call this function to clear the buffer even if no inputs are required
+     */
+    std::vector<Touch>& getTouchEvents(){
 
         touchEvents.clear();
         syn.lock();

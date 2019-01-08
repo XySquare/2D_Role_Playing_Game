@@ -15,8 +15,8 @@ public:
 
     Tile **const tiles;
 
-    TileLayer(Tile **tiles, unsigned int tileSetIndex) :
-            MapLayer(TILE_LAYER, tileSetIndex), tiles(tiles){}
+    TileLayer(const unsigned char id, Tile **tiles, unsigned char tileSetIndex) :
+            MapLayer(id, TILE_LAYER, tileSetIndex), tiles(tiles){}
 
     virtual ~TileLayer() override {
 

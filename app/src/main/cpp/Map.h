@@ -13,29 +13,29 @@ class Map final{
 
 public:
 
-    const int tileSetCount;
+    const unsigned char tileSetCount;
 
     TileSet **const tileSets;
 
-    const int width;
+    const unsigned int width;
 
-    const int height;
+    const unsigned int height;
 
-    const int tileWidth;
+    const unsigned int tileWidth;
 
-    const int tileHeight;
+    const unsigned int tileHeight;
 
-    const int *collisionLayer;
+    const unsigned char *collisionLayer;
 
-    const int layerCount;
+    const unsigned char layerCount;
 
     MapLayer **const layers;
 
-    Map(int tileSetCount, TileSet **const tileSets,
-        const int width, const int height,
-        const int tileWidth, const int tileHeight,
-        const int *collisionLayer,
-        const int layerCount, MapLayer **const layers) :
+    Map(unsigned char tileSetCount, TileSet **const tileSets,
+        const unsigned int width, const unsigned int height,
+        const unsigned int tileWidth, const unsigned int tileHeight,
+        const unsigned char *collisionLayer,
+        const unsigned char layerCount, MapLayer **const layers) :
             tileSetCount(tileSetCount), tileSets(tileSets),
             width(width), height(height),
             tileWidth(tileWidth), tileHeight(tileHeight),
@@ -44,11 +44,11 @@ public:
 
     ~Map() {
 
-        for (int i = 0; i < tileSetCount; ++i)
+        for (unsigned char i = 0; i < tileSetCount; ++i)
             delete tileSets[i];
         delete[] tileSets;
 
-        for (int i = 0; i < layerCount; ++i)
+        for (unsigned char i = 0; i < layerCount; ++i)
             delete layers[i];
         delete[] layers;
 

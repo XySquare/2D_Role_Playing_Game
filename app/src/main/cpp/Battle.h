@@ -85,7 +85,11 @@ public:
         }
 
         // Apply damage / 扣血
-        defer->hp -= defenderDamage;
+        if(defenderDamage > defer->hp){
+            defer->hp = 0;
+        }else{
+            defer->hp -= defenderDamage;
+        }
         //atker->hp -= attackerDamage;
         return true;
     }

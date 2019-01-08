@@ -52,9 +52,9 @@ private:
     short skip = -1;
 
 public:
-    GameStateBattle(World *world, SpriteBatcher *spriteBatcher, EventListener *eventListener,
-                    int monsterId) :
-            world(world), spriteBatcher(spriteBatcher), eventListener(eventListener) {
+    GameStateBattle(Game game, World *world, SpriteBatcher *spriteBatcher,
+                        EventListener *eventListener, int monsterId) :
+            Screen(game), world(world), spriteBatcher(spriteBatcher), eventListener(eventListener) {
         player = new Property(*(world->player.prop));
         monster = Db::getMonsterById(monsterId);
         monsterProperty = monster->prop;
@@ -81,9 +81,9 @@ public:
         tileSet = world->map->tileSets[tileSetIndex];
     }
 
-    virtual void update(float deltaTime, MultiTouchHandler *handler) override {
+    virtual void update(float deltaTime) override {
 
-        std::vector<Touch> touchEvents = handler->getTouchEvents();
+        std::vector<Touch> &touchEvents = game.input->getTouchEvents();
 
         if (state == 0) {
             timer += deltaTime;
@@ -145,6 +145,8 @@ public:
                             state = 1;
 
                             // Gain items
+                                    world->coin += monster->coin;
+                                    world->exp += monster->exp;
 
                             world->removeMonster();
                         } else {
@@ -238,6 +240,10 @@ public:
     }
 
     virtual void resume() override {
+
+    }
+
+    void onEvent(int what, int prop) override {
 
     }
 

@@ -10,17 +10,19 @@ class MapLayer {
 
 public:
 
-    enum {
+    enum Type: unsigned char{
         TILE_LAYER = 0,
         OBJECT_LAYER
     };
 
-    const unsigned char layerType;
+    const unsigned char id;
 
-    const unsigned int tileSetIndex;
+    const Type layerType;
 
-    MapLayer(const unsigned char layerType, const unsigned int tileSetIndex) :
-            layerType(layerType), tileSetIndex(tileSetIndex) {}
+    const unsigned char tileSetIndex;
+
+    MapLayer(const unsigned char id, const Type layerType, const unsigned char tileSetIndex) :
+            id(id), layerType(layerType), tileSetIndex(tileSetIndex) {}
 
     virtual ~MapLayer(){
 

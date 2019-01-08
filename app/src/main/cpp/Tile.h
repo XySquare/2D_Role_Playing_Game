@@ -11,11 +11,11 @@ class Tile {
 protected:
 
     // This field serve as the Gid of Tile, but serve as the frameLength of AnimeTile
-    const int gid;
+    const unsigned int gid;
 
 public:
 
-    Tile(const int gid) : gid(gid) {}
+    Tile(const unsigned int gid) : gid(gid) {}
 
     virtual int getGId(float stateTime){
 

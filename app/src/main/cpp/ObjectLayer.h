@@ -13,20 +13,20 @@ class ObjectLayer final: public MapLayer {
 
 public:
 
-    int objectCount;
+    unsigned int objectCount;
 
-    MapObject **const objects;
+    MapObject ** objects;
 
-    ObjectLayer(int objectCount, MapObject **objects, unsigned int tileSetIndex) :
-            MapLayer(OBJECT_LAYER, tileSetIndex), objectCount(objectCount), objects(objects) {};
+    ObjectLayer(const unsigned char id, unsigned int objectCount, MapObject **objects, unsigned char tileSetIndex) :
+            MapLayer(id, OBJECT_LAYER, tileSetIndex), objectCount(objectCount), objects(objects) {};
 
     void remove(MapObject *object) {
 
-        for (int j = 0; j < objectCount; j++) {
+        for (unsigned int j = 0; j < objectCount; j++) {
             MapObject *obj = objects[j];
             if (obj == object) {
                 delete object;
-                for (int k = j; k < objectCount - 1; k++) {
+                for (unsigned int k = j; k < objectCount - 1; k++) {
                     objects[k] = objects[k + 1];
                 }
                 objectCount--;
@@ -37,7 +37,7 @@ public:
 
     virtual ~ObjectLayer() override {
 
-        for(int i = 0; i < objectCount; ++i)
+        for(unsigned int i = 0; i < objectCount; ++i)
             delete objects[i];
         delete[] objects;
     }

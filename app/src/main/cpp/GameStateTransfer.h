@@ -6,13 +6,12 @@
 #define RPG2D_GAMESTATETRANSFER_H
 
 
-#include "EventListener.h"
-#include "MultiTouchHandler.h"
 #include "Screen.h"
 #include "World.h"
 #include "SpriteBatcher.h"
+#include "SaveDataHelper.h"
 
-class GameStateTransfer : public Screen {
+class GameStateTransfer final : public Screen {
 
 private:
 
@@ -22,34 +21,41 @@ private:
 
     EventListener *eventListener;
 
+    unsigned char state = 0;
+
     float timer = 0;
 
 public:
 
-    GameStateTransfer(World *world, SpriteBatcher *spriteBatcher, EventListener *eventListener) :
-            world(world),spriteBatcher(spriteBatcher),eventListener(eventListener) {}
+    GameStateTransfer(Game game, World *world, SpriteBatcher *spriteBatcher, EventListener *eventListener) :
+            Screen(game), world(world), spriteBatcher(spriteBatcher), eventListener(eventListener) {}
 
-    virtual void update(float deltaTime, MultiTouchHandler *handler)  {
+    virtual void update(float deltaTime) override {
 
-        handler->getTouchEvents();
+        game.input->getTouchEvents();
 
-        if(world->state == World::NORMAL){
+        if(state == 0){
+            timer += deltaTime;
+            if(timer >= 0.5f){
+                timer = 0.5f;
+                state = 1;
+                SaveDataHelper::saveMap(world->curMap, world->map);
+                world->loading(game.fileIO);
+                SaveDataHelper::loadMap(world->curMap, world->map);
+                state = 2;
+            }
+        }
+        else if(state == 2){
             timer -= deltaTime;
             if(timer <= 0){
                 timer = 0;
                 eventListener->onEvent(Event::RUNNING,0);
             }
-        }else if(world->state == World::PENDING){
-            timer += deltaTime;
-            if(timer >= 0.5f){
-                timer = 0.5f;
-                world->resume();
-            }
         }
-        world->update(deltaTime);
+        //world->update(deltaTime);
     }
 
-    virtual void present() {
+    virtual void present() override {
 
         spriteBatcher->beginBatch(Assets::unitTexture);
 
@@ -59,7 +65,11 @@ public:
         spriteBatcher->endBatch();
     }
 
-    virtual void resume(){
+    virtual void resume() override {
+
+    }
+
+    void onEvent(int what, int prop) override {
 
     }
 

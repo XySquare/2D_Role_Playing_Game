@@ -7,18 +7,18 @@
 
 
 #include "Player.h"
-#include "Map.h"
 #include "MapLoader.h"
 #include "Assets.h"
 #include "EventListener.h"
+#include "Bag.h"
 
-class World final{
+class World final {
 
 private:
 
-    EventListener &eventListener;
+    EventListener *eventListener;
 
-    std::string nextMap;
+    MapObject *monster = NULL;
 
     bool isAccessible(int landform) {
         return landform == 0;
@@ -26,32 +26,38 @@ private:
 
 public:
 
-    enum {
+    enum State : unsigned char {
         NORMAL,
-        LOADING,
-        PENDING
+        LOADING
     };
 
-    int state;
+    State state;
 
-    Map *map;
+    std::string curMap;
+
+    std::string nextMap;
+
+    Vector nextPosition;
+
+    Map *map = NULL;
 
     Player player;
 
     float timer = 0;
 
-    MapObject *monster = NULL;
+    Bag *bag;
 
-    World(EventListener &eventListener) : player(Player(200, 200)), eventListener(eventListener) {
+    unsigned int coin = 99999;
 
-        state = NORMAL;
-        MapLoader mapLoader;
-        map = mapLoader.loadMap("tiled_map00.json");
-        Assets::load(map);
-        player.position.x = 1792;
-        player.position.y = 640;
-        //nextMap = NULL;
-                LOGI("World Created.");
+    unsigned int exp = 99999;
+
+    World(EventListener *eventListener) : player(200, 200), nextPosition(0,0), eventListener(eventListener), bag(new Bag()) {
+
+        state = LOADING;
+        nextMap = "tiled_map00.json";
+        nextPosition.x = 1792;
+        nextPosition.y = 640;
+        LOGI("World Created.");
     }
 
     void setPlayerVelocity(Vector v) {
@@ -59,19 +65,25 @@ public:
         player.velocity = v;
     }
 
-    void loading(float deltaTime) {
+    void loading(FileIO *fileIO) {
 
-        delete map;
+        state = LOADING;
+        if(map)
+            delete map;
+        curMap = nextMap;
         MapLoader mapLoader;
-        map = mapLoader.loadMap(nextMap.c_str());
+        map = mapLoader.loadMap(fileIO, nextMap.c_str());
         Assets::load(map);
-        player.position.x = 1536;
-        player.position.y = 3584;
+        player.position.x = nextPosition.x;
+        player.position.y = nextPosition.y;
         nextMap.clear();
         state = NORMAL;
     }
 
-    void running(float deltaTime) {
+    void update(float deltaTime) {
+
+        if(state != NORMAL)
+            return;
 
         timer += deltaTime;
         if (timer > 12.f) {
@@ -102,7 +114,7 @@ public:
         float offsetX = 0;
         float offsetY = 0;
 
-        const int *layer = map->collisionLayer;
+        const unsigned char *layer = map->collisionLayer;
         int width = map->width;
 
         if (layer != NULL) {
@@ -210,19 +222,26 @@ public:
                 }
             }
         }
-    }
 
-    void update(float deltaTime) {
+        if (monster) {
 
-        switch (state) {
-            case NORMAL:
-                running(deltaTime);
-                break;
-            case LOADING:
-                loading(deltaTime);
-                break;
-            default:
-                break;
+            MapObject *object = monster;
+
+            float top = player.position.y;
+            float bottom = player.position.y + Player::PLAYER_HEIGHT;
+            float left = player.position.x;
+            float right = player.position.x + Player::PLAYER_WIDTH;
+
+            float top2 = object->position.y - 2;
+            float bottom2 = object->position.y + object->height + 2;
+            float left2 = object->position.x - 2;
+            float right2 = object->position.x + object->width + 2;
+
+            if (!(left < right2 && right > left2 && top < bottom2 && bottom > top2)) {
+
+                monster = NULL;
+                eventListener->onEvent(Event::DOOR, 0);
+            }
         }
     }
 
@@ -231,16 +250,27 @@ public:
         if (object->type == "monster") {
 
             monster = object;
-            eventListener.onEvent(Event::BATTLE, object->properties);
+            eventListener->onEvent(Event::BATTLE, object->getIntProperty("monsterId"));
         } else if (object->type == "item") {
 
-            eventListener.onEvent(Event::ITEM, object->properties);
+            eventListener->onEvent(Event::ITEM, object->getIntProperty("itemId"));
             objectLayer->remove(object);
-        } else if (object->id == 15) {
+        } else if (object->type == "door") {
 
-            state = PENDING;
-            nextMap = "tiled_map01.json";
-            eventListener.onEvent(Event::TRANSFER, 0);
+            monster = object;
+            eventListener->onEvent(Event::DOOR, object->getIntProperty("doorType"));
+        } else if (object->type == "transfer") {
+
+            //state = PENDING;
+            nextMap = object->getStringProperty("a");
+            nextPosition.x = object->getIntProperty("x");
+            nextPosition.y = object->getIntProperty("y");
+            eventListener->onEvent(Event::TRANSFER, 0);
+        } else if (object->type == "shop") {
+
+            eventListener->onEvent(Event::SHOP, object->getIntProperty("a"));
+        } else{
+            LOGI("Object Type: %s",object->type.c_str());
         }
     }
 
@@ -254,17 +284,8 @@ public:
         return x > y ? y : x;
     }
 
-    void resume() {
-
-        if (state == PENDING) {
-            if(nextMap.length() > 0){
-                state = LOADING;
-            }
-        }
-    }
-
-    void removeMonster(){
-        if(monster){
+    void removeMonster() {
+        if (monster) {
             // Remove Object
             int layerCount = map->layerCount;
             for (int i = 0; i < layerCount; i++) {
@@ -284,6 +305,7 @@ public:
     ~World() {
 
         delete map;
+        delete bag;
     }
 };
 

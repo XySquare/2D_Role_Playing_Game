@@ -14,34 +14,29 @@
 #include <stdlib.h>
 #include <math.h>
 #include <chrono>
+//Test
+#include <stdio.h>
 
-#include "glm/mat4x4.hpp"
-#include "glm/ext/matrix_clip_space.hpp"
-#include "glm/gtc/type_ptr.hpp"
 #include "Texture.h"
 #include "Vertex.h"
 #include "Screen.h"
 #include "GameScreen.h"
 #include "MultiTouchHandler.h"
 #include "Graphic.h"
+#include "FileIO.h"
 
 #define  LOG_TAG    "libgl2jni"
 #define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG,__VA_ARGS__)
 #define  LOGI(...)  __android_log_print(ANDROID_LOG_INFO,LOG_TAG,__VA_ARGS__)
 #define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR,LOG_TAG,__VA_ARGS__)
 
-long long int nanoTime();
-
 bool isInitialized = false;
 
-glm::mat4 mMVPMatrix;
+GLfloat *mMVPMatrix;
 
 GLuint gProgram;
-//GLuint gvPositionHandle;
-//GLuint gvCoordinateHandle;
-//GLint gvMatrixHandle;
-//GLint gvTextureHandle;
-//GLint gvColorHandle;
+
+FileIO *fileIO;
 
 MultiTouchHandler *gMultiTouchHandler;
 
@@ -49,7 +44,7 @@ Screen *currentScreen;
 
 long long int startTime;
 
-float deltaTime = 1.0f/60.0f;
+float deltaTime = 1.0f / 60.0f;
 
 int frames = 0;
 
@@ -81,15 +76,15 @@ static void printGLString(const char *name, GLenum s) {
 }
 
 //检查当前程序错误
-static void checkGlError(const char* op) {
+static void checkGlError(const char *op) {
     for (GLint error = glGetError(); error; error
-            = glGetError()) {
+                                                    = glGetError()) {
         LOGI("after %s() glError (0x%x)\n", op, error);
     }
 }
 
 //获取并编译着色器对象
-GLuint loadShader(GLenum shaderType, const char* pSource) {
+GLuint loadShader(GLenum shaderType, const char *pSource) {
     //创建一个顶点着色器，并将索引交给shader
     GLuint shader = glCreateShader(shaderType);
     if (shader) {
@@ -106,11 +101,11 @@ GLuint loadShader(GLenum shaderType, const char* pSource) {
             GLint infoLen = 0;
             glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLen);
             if (infoLen) {
-                char* buf = (char*) malloc(infoLen);
+                char *buf = (char *) malloc(infoLen);
                 if (buf) {
                     glGetShaderInfoLog(shader, infoLen, NULL, buf);
                     LOGE("Could not compile shader %d:\n%s\n",
-                            shaderType, buf);
+                         shaderType, buf);
                     free(buf);
                 }
                 glDeleteShader(shader);
@@ -122,7 +117,7 @@ GLuint loadShader(GLenum shaderType, const char* pSource) {
 }
 
 //使用着色器生成着色器程序对象
-GLuint createProgram(const char* pVertexSource, const char* pFragmentSource) {
+GLuint createProgram(const char *pVertexSource, const char *pFragmentSource) {
     GLuint vertexShader = loadShader(GL_VERTEX_SHADER, pVertexSource);
     checkGlError("loadShaderGL_VERTEX_SHADER");
     if (!vertexShader) {
@@ -160,7 +155,7 @@ GLuint createProgram(const char* pVertexSource, const char* pFragmentSource) {
             // Get the date of Log / 获取日志信息
             glGetProgramiv(program, GL_INFO_LOG_LENGTH, &bufLength);
             if (bufLength) {
-                char* buf = (char*) malloc(bufLength);
+                char *buf = (char *) malloc(bufLength);
                 if (buf) {
                     //从日志缓存中取出关于program length个长度的日志，并保存在buf中
                     glGetProgramInfoLog(program, bufLength, NULL, buf);
@@ -176,30 +171,47 @@ GLuint createProgram(const char* pVertexSource, const char* pFragmentSource) {
     return program;
 }
 
-long long int nanoTime(){
-    return std::chrono::duration_cast< std::chrono::nanoseconds >(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+/**
+ * Return the time since the last reboot in nanoseconds
+ */
+long long int nanoTime() {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
-void onInitialize(JNIEnv *env){
+/**
+ * Calculate orthographic projection matrix
+ * See: https://www.scratchapixel.com/lessons/3d-basic-rendering/perspective-and-orthographic-projection-matrix/orthographic-projection-matrix
+ */
+GLfloat *ortho(float left, float right, float bottom, float top, float zNear, float zFar){
+
+    return new GLfloat[16]{2/(right-left),0,0,0,0,2/(top-bottom),0,0,0,0,-2/(zFar-zNear),0,-(right+left)/(right-left),-(top+bottom)/(top-bottom),-(zFar+zNear)/(zFar-zNear),1};
+};
+
+/**
+ * This function will be called only once
+ */
+void onInitialize(JNIEnv *env) {
 
     Assets::setup(env);
 
     gMultiTouchHandler = new MultiTouchHandler();
 
-    currentScreen = new GameScreen();
+    currentScreen = new GameScreen(Game(fileIO, gMultiTouchHandler));
 
     // Projection matrix
-    mMVPMatrix = glm::ortho(0.f, 1280.f, 720.f, 0.f, -1.f, 1.f);
+    //mMVPMatrix = glm::ortho(0.f, 1280.f, 720.f, 0.f, -1.f, 1.f);
+    mMVPMatrix = ortho(0.f, 1280.f, 720.f, 0.f, -1.f, 1.f);
 
-    LOGI("instantiated.");
+    LOGI("Initialized.");
 }
 
-void onSurfaceCreated(JNIEnv *env){
+void onSurfaceCreated(JNIEnv *env) {
 
-    if(!isInitialized){
+    if (!isInitialized) {
         onInitialize(env);
         isInitialized = true;
-    }else{
+    } else {
         Assets::reload();
     }
 
@@ -238,7 +250,7 @@ void onSurfaceCreated(JNIEnv *env){
     //gvColorHandle = glGetAttribLocation(gProgram, "aColor");
     //GLint gvTextureHandle = glGetUniformLocation(gProgram, "uTexture");
     //glUniform1i(gvTextureHandle, 0);
-            // Error 502, Why?
+    // Error 502, Why?
     checkGlError("glGetAttribLocation");
 
     //使用一个着色器程序(在OpenGL中我们可以持有多个着色器程序)
@@ -255,7 +267,8 @@ void onSurfaceCreated(JNIEnv *env){
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     checkGlError("glClearColor");
 
-    glUniformMatrix4fv(gvMatrixHandle, 1, GL_FALSE, glm::value_ptr(mMVPMatrix));
+    //glUniformMatrix4fv(gvMatrixHandle, 1, GL_FALSE, glm::value_ptr(mMVPMatrix));
+    glUniformMatrix4fv(gvMatrixHandle, 1, GL_FALSE, mMVPMatrix);
 
     currentScreen->resume();
 }
@@ -274,42 +287,77 @@ void onDrawFrame() {
 
     long long int curTime = nanoTime();
 
-    if(curTime - startTime >= 1000000000) {
-        LOGD("Fps: %d",frames);
-        if(frames >= 59 || frames <= 0)
+    if (curTime - startTime >= 1000000000) {
+        LOGD("Fps: %d", frames);
+        if (frames >= 59 || frames <= 0)
             frames = 60;
-        deltaTime = 1.0f/frames;
+        deltaTime = 1.0f / frames;
         frames = 0;
         startTime = curTime;
     }
     frames++;
 
-    glClear( GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+    glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
     //checkGlError("glClear");
 
-    currentScreen->update(deltaTime, gMultiTouchHandler);
+    currentScreen->update(deltaTime);
     currentScreen->present();
 }
 
 extern "C" {
-    JNIEXPORT void JNICALL Java_xyy_game_rpg2d_framework_GL2JNILib_onSurfaceCreated(JNIEnv *env, jclass type);
-    JNIEXPORT void JNICALL Java_xyy_game_rpg2d_framework_GL2JNILib_onSurfaceChanged(JNIEnv * env, jclass type,  jint width, jint height);
-    JNIEXPORT void JNICALL Java_xyy_game_rpg2d_framework_GL2JNILib_onDrawFrame(JNIEnv * env, jclass type);
-    JNIEXPORT void JNICALL Java_xyy_game_rpg2d_framework_GL2JNILib_onTouch(JNIEnv *env, jclass type, jint pointer,
-                                                                           jshort action, jint x, jint y);
+JNIEXPORT void JNICALL
+Java_xyy_game_rpg2d_framework_GL2JNILib_setupFileIO(JNIEnv *env, jclass type,
+                                                    jstring externalFilesDir_,
+                                                    jobject assetManager);
+JNIEXPORT void JNICALL
+Java_xyy_game_rpg2d_framework_GL2JNILib_onSurfaceCreated(JNIEnv *env, jclass type);
+JNIEXPORT void JNICALL
+Java_xyy_game_rpg2d_framework_GL2JNILib_onSurfaceChanged(JNIEnv *env, jclass type, jint width,
+                                                         jint height);
+JNIEXPORT void JNICALL
+Java_xyy_game_rpg2d_framework_GL2JNILib_onDrawFrame(JNIEnv *env, jclass type);
+JNIEXPORT void JNICALL
+Java_xyy_game_rpg2d_framework_GL2JNILib_onTouch(JNIEnv *env, jclass type, jint pointer,
+                                                jshort action, jint x, jint y);
 };
 
-JNIEXPORT void JNICALL Java_xyy_game_rpg2d_framework_GL2JNILib_onSurfaceCreated(JNIEnv *env, jclass type) {
+JNIEXPORT void JNICALL
+Java_xyy_game_rpg2d_framework_GL2JNILib_setupFileIO(JNIEnv *env, jclass type,
+                                                    jstring externalFilesDir_,
+                                                    jobject assetManager) {
+
+    const char *externalFilesDir = env->GetStringUTFChars(externalFilesDir_, 0);
+
+    // Get the global reference of AssetManager, to ensure it is valid after the method returns
+    jobject grAssetManager = env->NewGlobalRef(assetManager);
+
+    // Note: The global reference will be valid until DeleteGlobalRef is called
+    // Here, AssetManager shall be valid during the lifetime of the application,
+    // so no DeleteGlobalRef will be called currently
+
+    // Get the native AAssetManager
+    AAssetManager *aAssetManager = AAssetManager_fromJava(env, grAssetManager);
+
+    fileIO = new FileIO(externalFilesDir, aAssetManager);
+
+    env->ReleaseStringUTFChars(externalFilesDir_, externalFilesDir);
+}
+
+JNIEXPORT void JNICALL
+Java_xyy_game_rpg2d_framework_GL2JNILib_onSurfaceCreated(JNIEnv *env, jclass type) {
 
     onSurfaceCreated(env);
 }
 
-JNIEXPORT void JNICALL Java_xyy_game_rpg2d_framework_GL2JNILib_onSurfaceChanged(JNIEnv *env, jclass type,  jint width, jint height) {
+JNIEXPORT void JNICALL
+Java_xyy_game_rpg2d_framework_GL2JNILib_onSurfaceChanged(JNIEnv *env, jclass type, jint width,
+                                                         jint height) {
 
     onSurfaceChanged(width, height);
 }
 
-JNIEXPORT void JNICALL Java_xyy_game_rpg2d_framework_GL2JNILib_onDrawFrame(JNIEnv * env, jclass type) {
+JNIEXPORT void JNICALL
+Java_xyy_game_rpg2d_framework_GL2JNILib_onDrawFrame(JNIEnv *env, jclass type) {
 
     onDrawFrame();
 }
@@ -318,33 +366,10 @@ JNIEXPORT void JNICALL
 Java_xyy_game_rpg2d_framework_GL2JNILib_onTouch(JNIEnv *env, jclass type, jint pointer,
                                                 jshort action, jint x, jint y) {
     Touch event;
-    event.pointer = (short)pointer;
-    event.action = (short)action;
-    event.x = (short)x;
-    event.y = (short)y;
+    event.pointer = (unsigned char) pointer;
+    event.action = (Action) action;
+    event.x = (short) x;
+    event.y = (short) y;
     gMultiTouchHandler->onTouch(event);
 }
-
-/*extern "C"
-JNIEXPORT void JNICALL
-Java_com_android_gl2jni_GL2JNILib_loadImage(JNIEnv *env, jclass type, jobject assetManager) {
-
-    AAssetManager* aAssetManager = AAssetManager_fromJava(env,assetManager);
-
-    // Open file
-    AAsset* file = AAssetManager_open(aAssetManager, "img_test.png", AASSET_MODE_BUFFER);
-    // Get the file length
-    size_t fileLength = AAsset_getLength(file);
-
-    // Allocate memory to read file
-    unsigned char* fileContent = new unsigned char[fileLength];
-
-    AAsset_read(file, fileContent, fileLength);
-
-    //Do something
-    tex_2d = SOIL_load_OGL_texture_from_memory(fileContent,fileLength,SOIL_LOAD_RGBA,SOIL_CREATE_NEW_ID,SOIL_FLAG_POWER_OF_TWO);
-
-    delete [] fileContent;
-
-}*/
 

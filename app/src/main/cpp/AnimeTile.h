@@ -14,11 +14,11 @@ private:
 
     const float frameDuration;
 
-    const int *frames;
+    const unsigned int *frames;
 
 public:
 
-    AnimeTile(const float frameDuration, const int frameLength, int *frames)
+    AnimeTile(const float frameDuration, const unsigned int frameLength, unsigned int *frames)
             : Tile(frameLength), frameDuration(frameDuration), frames(frames) {}
 
 

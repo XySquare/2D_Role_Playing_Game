@@ -1,6 +1,5 @@
 package xyy.game.rpg2d;
 
-import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.opengl.GLES20;
@@ -10,16 +9,12 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.InputStream;
 
+import xyy.game.rpg2d.framework.impl.AndroidGame;
+
 /**
- * Created by ${XYY} on ${2015/11/20}.
+ * Created by ${XYY} on ${2018/11/20}.
  */
 public class AssetsLoader {
-
-    private static AssetManager mAssetManager;
-
-    static void setAssetManager(AssetManager assetManager) {
-        AssetsLoader.mAssetManager = assetManager;
-    }
 
     public static int load(String fileName) {
 
@@ -27,7 +22,7 @@ public class AssetsLoader {
         Bitmap bitmap = null;
         try {
             // Load Bitmap
-            in = mAssetManager.open(fileName);
+            in = AndroidGame.AssetManager.open(fileName);
             bitmap = BitmapFactory.decodeStream(in);
             if (bitmap == null)
                 throw new RuntimeException("Couldn't load bitmap from asset '"

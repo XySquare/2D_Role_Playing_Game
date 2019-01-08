@@ -21,11 +21,11 @@ import java.util.Date;
  */
 
 public class BaseApplication extends Application {
-    private Game game;
+    //private Game game;
 
-    public void init(Game activity){
+    /*public void init(Game activity){
         this.game = activity;
-    }
+    }*/
 
     @Override
     public void onCreate() {
@@ -88,8 +88,8 @@ public class BaseApplication extends Application {
         BufferedWriter out = null;
         try {
             String fileName = "crash";
-            out = new BufferedWriter(new OutputStreamWriter(
-                    game.getFileIO().writeFile(fileName)));
+            //out = new BufferedWriter(new OutputStreamWriter(
+                    //game.getFileIO().writeFile(fileName)));
             out.write(sb);
             //TODO:文件保存完了之后,在应用下次启动的时候去检查错误日志,发现新的错误日志,就发送给开发者
         } catch (Exception ignored) {
