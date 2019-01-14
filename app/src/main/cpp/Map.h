@@ -8,6 +8,7 @@
 
 #include "MapLayer.h"
 #include "TileSet.h"
+#include "Vector2.h"
 
 class Map final{
 
@@ -31,16 +32,20 @@ public:
 
     MapLayer **const layers;
 
-    Map(unsigned char tileSetCount, TileSet **const tileSets,
-        const unsigned int width, const unsigned int height,
-        const unsigned int tileWidth, const unsigned int tileHeight,
-        const unsigned char *collisionLayer,
-        const unsigned char layerCount, MapLayer **const layers) :
+    const Vector3 backgroundColor;
+
+    const Vector2 defaultLocation;
+
+    Map(unsigned char tileSetCount, TileSet **const tileSets, const unsigned int width,
+            const unsigned int height, const unsigned int tileWidth, const unsigned int tileHeight,
+            const unsigned char *collisionLayer, const unsigned char layerCount,
+            MapLayer **const layers, const Vector3 backgroundColor, const Vector2 defaultLocation) :
             tileSetCount(tileSetCount), tileSets(tileSets),
             width(width), height(height),
             tileWidth(tileWidth), tileHeight(tileHeight),
             collisionLayer(collisionLayer),
-            layerCount(layerCount), layers(layers) {}
+            layerCount(layerCount), layers(layers), backgroundColor(backgroundColor),
+            defaultLocation(defaultLocation) {}
 
     ~Map() {
 

@@ -10,20 +10,25 @@ class Property {
 
 public:
 
-    int maxHp;
+    unsigned short lv;
 
-    int hp;
+    unsigned short maxHp;
 
-    int atk;
+    // During battle, HP might be negative
+    signed short hp;
 
-    int def;
+    unsigned short atk;
 
-    int agi;
+    unsigned short def;
 
-    Property(int maxHp, int atk, int def, int agi) : maxHp(maxHp), hp(maxHp), atk(atk),
-                                                     def(def), agi(agi) {}
+    unsigned short agi;
+
+    Property(unsigned short lv, unsigned short maxHp, unsigned short atk, unsigned short def,
+             unsigned short agi) : lv(lv), maxHp(maxHp), hp(maxHp), atk(atk),
+                                   def(def), agi(agi) {}
 
     Property(const Property &other) {
+        lv = other.lv;
         maxHp = other.maxHp;
         hp = other.hp;
         atk = other.atk;

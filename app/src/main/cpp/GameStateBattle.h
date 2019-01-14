@@ -12,11 +12,10 @@
 #include "Db.h"
 
 class GameStateBattle : public Screen {
+
 private:
 
     World *world;
-
-    SpriteBatcher *spriteBatcher;
 
     EventListener *eventListener;
 
@@ -25,10 +24,13 @@ private:
     float timer = 0;
 
     Monster *monster;
+
     Property *player;
+
     Property *monsterProperty;
 
     int tileSetIndex = -1;
+
     TileSet *tileSet;
 
     int state = 0;
@@ -51,18 +53,36 @@ private:
 
     short skip = -1;
 
+    void drawNumber(SpriteBatcher *spriteBatcher, float x, float y, unsigned int num) {
+
+        if (num == 0)
+            spriteBatcher->drawSprite(x - 38, y, 38, 40,
+                                      TextureRegion(0, 3 * 64 / 512.f,
+                                                    38 / 512.f, 40 / 512.f));
+        else {
+            unsigned char i = 0;
+            while (num != 0) {
+                spriteBatcher->drawSprite(x - 38 * i - 38, y, 38, 40,
+                                          TextureRegion(38 / 512.f * (num % 10), 3 * 64 / 512.f,
+                                                        38 / 512.f, 40 / 512.f));
+                num = num / 10;
+                i++;
+            }
+        }
+    }
+
 public:
-    GameStateBattle(Game game, World *world, SpriteBatcher *spriteBatcher,
-                        EventListener *eventListener, int monsterId) :
-            Screen(game), world(world), spriteBatcher(spriteBatcher), eventListener(eventListener) {
+
+    GameStateBattle(Game game, World *world, EventListener *eventListener,
+                    unsigned int monsterId) :
+            Screen(game), world(world), eventListener(eventListener) {
         player = new Property(*(world->player.prop));
-        monster = Db::getMonsterById(monsterId);
+        monster = world->db->getMonsterById(monsterId);
         monsterProperty = monster->prop;
         battle = new Battle();
         battle->newBattle(monsterProperty, player);
         playerHp = prevPlayerHp = curPlayerHp = player->hp;
         monsterHp = prevMonsterHp = curMonsterHp = monsterProperty->hp;
-
 
         int layerCount = world->map->layerCount;
         for (int i = 0; i < layerCount; i++) {
@@ -79,6 +99,10 @@ public:
         }
 
         tileSet = world->map->tileSets[tileSetIndex];
+    }
+
+    virtual void resume() override {
+
     }
 
     virtual void update(float deltaTime) override {
@@ -145,9 +169,10 @@ public:
                             state = 1;
 
                             // Gain items
-                                    world->coin += monster->coin;
-                                    world->exp += monster->exp;
+                            world->coin += monster->coin;
+                            world->accessExp(monster->exp);
 
+                            world->player.prop->hp = player->hp;
                             world->removeMonster();
                         } else {
                             //失败...
@@ -176,16 +201,17 @@ public:
             timer += deltaTime;
         } else {
             if (touchEvents.size() > 0) {
-                eventListener->onEvent(Event::RUNNING, 0);
+                eventListener->onReceive(Event::RUNNING, NULL);
             }
         }
     }
 
     virtual void present() override {
 
+        SpriteBatcher *spriteBatcher = game.graphic;
+
         // Background
-        spriteBatcher->beginBatch(Assets::unitTexture);
-        glVertexAttrib4f(GRAPHIC_COLOR_HANDEL, 0.f, 0.f, 0.f, bgAlpha);
+        spriteBatcher->beginBatch(0.f, 0.f, 0.f, bgAlpha);
         spriteBatcher->drawSprite(0, 0, 1280, 720, TextureRegion(0, 0, 1, 1));
         spriteBatcher->endBatch();
 
@@ -232,55 +258,20 @@ public:
                                           TextureRegion((float) (6 * 64) / 512, 0, (float) 64 / 512,
                                                         (float) 64 / 512));
             // HP
-            drawNumber(damageX, 720 / 2, battle->getDamage());
-            drawNumber(1280 / 2 - 8, 720 / 2 + 120 - 40, monsterHp);
-            drawNumber(1280 / 2 + 8 + 240, 720 / 2 + 120 - 40, playerHp);
+            drawNumber(spriteBatcher, damageX, 720 / 2, battle->getDamage());
+            drawNumber(spriteBatcher, 1280 / 2 - 8, 720 / 2 + 120 - 40, monsterHp);
+            drawNumber(spriteBatcher, 1280 / 2 + 8 + 240, 720 / 2 + 120 - 40, playerHp);
             spriteBatcher->endBatch();
         }
     }
 
-    virtual void resume() override {
-
-    }
-
-    void onEvent(int what, int prop) override {
-
-    }
-
-    /*void parseDigits(std::vector<unsigned char> &digits, unsigned int num) {
-
-        if (num == 0)
-            digits.push_back(0);
-        else
-            while (num != 0) {
-                digits.push_back(num % 10);
-                num = num / 10;
-            }
-    }*/
-
-    void drawNumber(float x, float y, unsigned int num) {
-
-        if (num == 0)
-            spriteBatcher->drawSprite(x - 38, y, 38, 40,
-                                      TextureRegion(0, 3 * 64 / 512.f,
-                                                    38 / 512.f, 40 / 512.f));
-        else {
-            unsigned char i = 0;
-            while (num != 0) {
-                spriteBatcher->drawSprite(x - 38 * i - 38, y, 38, 40,
-                                          TextureRegion(0 + 38 / 512.f * (num % 10), 3 * 64 / 512.f,
-                                                        38 / 512.f, 40 / 512.f));
-                num = num / 10;
-                i++;
-            }
-        }
+    void onReceive(Event what, const void *arg) override {
 
     }
 
     virtual ~GameStateBattle() override {
 
         delete battle;
-        delete monsterProperty;
         delete player;
     }
 };

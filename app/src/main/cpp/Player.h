@@ -26,9 +26,9 @@ public:
         PLAYER_STATE_RIGHT
     };
 
-    static const int PLAYER_WIDTH = 62;
+    static const int PLAYER_WIDTH = 23;
 
-    static const int PLAYER_HEIGHT = 32;
+    static const int PLAYER_HEIGHT = 11;
 
     State state = PLAYER_STATE_DOWN;
 
@@ -38,7 +38,7 @@ public:
 
     Player(float x, float y) : DynamicGameObject(x, y) {
 
-        prop = new Property(99999,999,999,999);
+        prop = new Property(1,20,2,1,1);
     }
 
     void update(float deltaTime) {

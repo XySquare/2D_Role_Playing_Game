@@ -3,7 +3,6 @@
 // OpenGL ES 2.0 code
 
 #include <jni.h>
-#include <android/log.h>
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
 
@@ -14,8 +13,6 @@
 #include <stdlib.h>
 #include <math.h>
 #include <chrono>
-//Test
-#include <stdio.h>
 
 #include "Texture.h"
 #include "Vertex.h"
@@ -24,19 +21,20 @@
 #include "MultiTouchHandler.h"
 #include "Graphic.h"
 #include "FileIO.h"
+#include "Log.h"
 
-#define  LOG_TAG    "libgl2jni"
-#define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG,__VA_ARGS__)
-#define  LOGI(...)  __android_log_print(ANDROID_LOG_INFO,LOG_TAG,__VA_ARGS__)
-#define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR,LOG_TAG,__VA_ARGS__)
+#define  TAG    "libgl2jni"
+
 
 bool isInitialized = false;
 
-GLfloat *mMVPMatrix;
+GLfloat *gMVPMatrix;
 
 GLuint gProgram;
 
-FileIO *fileIO;
+SpriteBatcher *gSpriteBatcher;
+
+FileIO *gFileIO;
 
 MultiTouchHandler *gMultiTouchHandler;
 
@@ -72,14 +70,14 @@ auto gFragmentShader =
 
 static void printGLString(const char *name, GLenum s) {
     const char *v = (const char *) glGetString(s);
-    LOGI("GL %s = %s\n", name, v);
+    LOGI(TAG,"GL %s = %s\n", name, v);
 }
 
 //检查当前程序错误
 static void checkGlError(const char *op) {
     for (GLint error = glGetError(); error; error
                                                     = glGetError()) {
-        LOGI("after %s() glError (0x%x)\n", op, error);
+        LOGI(TAG,"after %s() glError (0x%x)\n", op, error);
     }
 }
 
@@ -104,7 +102,7 @@ GLuint loadShader(GLenum shaderType, const char *pSource) {
                 char *buf = (char *) malloc(infoLen);
                 if (buf) {
                     glGetShaderInfoLog(shader, infoLen, NULL, buf);
-                    LOGE("Could not compile shader %d:\n%s\n",
+                    LOGE(TAG,"Could not compile shader %d:\n%s\n",
                          shaderType, buf);
                     free(buf);
                 }
@@ -159,7 +157,7 @@ GLuint createProgram(const char *pVertexSource, const char *pFragmentSource) {
                 if (buf) {
                     //从日志缓存中取出关于program length个长度的日志，并保存在buf中
                     glGetProgramInfoLog(program, bufLength, NULL, buf);
-                    LOGE("Could not link program:\n%s\n", buf);
+                    LOGE(TAG,"Could not link program:\n%s\n", buf);
                     free(buf);
                 }
             }
@@ -195,15 +193,17 @@ void onInitialize(JNIEnv *env) {
 
     Assets::setup(env);
 
+    gSpriteBatcher = new SpriteBatcher(1024);
+
     gMultiTouchHandler = new MultiTouchHandler();
 
-    currentScreen = new GameScreen(Game(fileIO, gMultiTouchHandler));
+    currentScreen = new GameScreen(Game(gSpriteBatcher, gFileIO, gMultiTouchHandler));
 
     // Projection matrix
     //mMVPMatrix = glm::ortho(0.f, 1280.f, 720.f, 0.f, -1.f, 1.f);
-    mMVPMatrix = ortho(0.f, 1280.f, 720.f, 0.f, -1.f, 1.f);
+    gMVPMatrix = ortho(0.f, 1280.f, 720.f, 0.f, -1.f, 1.f);
 
-    LOGI("Initialized.");
+    LOGI(TAG,"Initialized.");
 }
 
 void onSurfaceCreated(JNIEnv *env) {
@@ -241,7 +241,7 @@ void onSurfaceCreated(JNIEnv *env) {
 
     gProgram = createProgram(gVertexShader, gFragmentShader);
     if (!gProgram) {
-        LOGE("Could not create program.");
+        LOGE(TAG,"Could not create program.");
         return;
     }
     GLint gvMatrixHandle = glGetUniformLocation(gProgram, "uMVPMatrix");
@@ -268,7 +268,7 @@ void onSurfaceCreated(JNIEnv *env) {
     checkGlError("glClearColor");
 
     //glUniformMatrix4fv(gvMatrixHandle, 1, GL_FALSE, glm::value_ptr(mMVPMatrix));
-    glUniformMatrix4fv(gvMatrixHandle, 1, GL_FALSE, mMVPMatrix);
+    glUniformMatrix4fv(gvMatrixHandle, 1, GL_FALSE, gMVPMatrix);
 
     currentScreen->resume();
 }
@@ -278,7 +278,7 @@ void onSurfaceChanged(int w, int h) {
     glViewport(0, 0, w, h);
     checkGlError("glViewport");
 
-    LOGI("setupGraphics(%d, %d)", w, h);
+    LOGI(TAG,"setupGraphics(%d, %d)", w, h);
 
     startTime = nanoTime();
 }
@@ -288,7 +288,7 @@ void onDrawFrame() {
     long long int curTime = nanoTime();
 
     if (curTime - startTime >= 1000000000) {
-        LOGD("Fps: %d", frames);
+        LOGD(TAG,"Fps: %d", frames);
         if (frames >= 59 || frames <= 0)
             frames = 60;
         deltaTime = 1.0f / frames;
@@ -331,14 +331,14 @@ Java_xyy_game_rpg2d_framework_GL2JNILib_setupFileIO(JNIEnv *env, jclass type,
     // Get the global reference of AssetManager, to ensure it is valid after the method returns
     jobject grAssetManager = env->NewGlobalRef(assetManager);
 
-    // Note: The global reference will be valid until DeleteGlobalRef is called
+    // Note: The global reference will be valid until DeleteGlobalRef is called.
     // Here, AssetManager shall be valid during the lifetime of the application,
     // so no DeleteGlobalRef will be called currently
 
     // Get the native AAssetManager
     AAssetManager *aAssetManager = AAssetManager_fromJava(env, grAssetManager);
 
-    fileIO = new FileIO(externalFilesDir, aAssetManager);
+    gFileIO = new FileIO(externalFilesDir, aAssetManager);
 
     env->ReleaseStringUTFChars(externalFilesDir_, externalFilesDir);
 }

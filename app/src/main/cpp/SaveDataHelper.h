@@ -156,6 +156,14 @@ private:
 
 public:
 
+    static void clear(){
+
+        for (MapSav *m:mapSavs) {
+            delete m;
+        }
+        mapSavs.clear();
+    }
+
     static void saveMap(std::string mapId, Map *map) {
 
         unsigned char objLayerCount = 0;
@@ -192,7 +200,7 @@ public:
 
         Player &player = world->player;
         Bag *bag = world->bag;
-        Map *map = world->map;
+        //Map *map = world->map;
 
         using namespace rapidjson;
 
@@ -205,8 +213,11 @@ public:
         // Bag/Key
         Value keyAry(kArrayType);
         for (unsigned char i = 0; i < 3; i++)
-            keyAry.PushBack(world->bag->key[i], allocator);
+            keyAry.PushBack(bag->key[i], allocator);
         bagObj.AddMember("key", keyAry, allocator);
+        // Bag/Potion
+        bagObj.AddMember("potion_s", bag->potion_s, allocator);
+        bagObj.AddMember("potion_l", bag->potion_l, allocator);
         worldObj.AddMember("bag", bagObj, allocator);
 
         // Coin
@@ -216,7 +227,7 @@ public:
         worldObj.AddMember("curMap", Value(world->curMap.c_str(), allocator).Move(), allocator);
 
         // Exp
-        worldObj.AddMember("exp", world->exp, allocator);
+        worldObj.AddMember("exp", world->getExp(), allocator);
 
         // Player
         Value playerObj(kObjectType);
@@ -421,7 +432,7 @@ public:
 
         Player &player = world->player;
         Bag *bag = world->bag;
-        Map *map = world->map;
+        //Map *map = world->map;
 
         using namespace rapidjson;
 
@@ -430,10 +441,12 @@ public:
         Value &bagObj = worldObj["bag"];
         Value &keyAry = bagObj["key"];
         for (unsigned char i = 0; i < 3; i++)
-            world->bag->key[i] = (unsigned short) keyAry[i].GetInt();
+            bag->key[i] = (unsigned short) keyAry[i].GetInt();
+        bag->potion_s = static_cast<unsigned char>(bagObj["potion_s"].GetInt());
+        bag->potion_l = static_cast<unsigned char>(bagObj["potion_l"].GetInt());
         world->coin = static_cast<unsigned int>(worldObj["coin"].GetInt());
         world->nextMap = worldObj["curMap"].GetString();
-        world->exp = static_cast<unsigned int>(worldObj["exp"].GetInt());
+        world->setExp(static_cast<unsigned int>(worldObj["exp"].GetInt()));
         Value &playerObj = worldObj["player"];
         Value &playerPositionObj = playerObj["position"];
         world->nextPosition.x = playerPositionObj["x"].GetFloat();
@@ -444,10 +457,8 @@ public:
         player.prop->def = playerPropertyObj["def"].GetInt();
         player.prop->hp = playerPropertyObj["hp"].GetInt();
         player.prop->maxHp = playerPropertyObj["maxHp"].GetInt();
-        for (MapSav *m:mapSavs) {
-            delete m;
-        }
-        mapSavs.clear();
+
+        clear();
         Value &mapsObj = worldObj["maps"];
         for (Value::ConstMemberIterator itr = mapsObj.MemberBegin();
              itr != mapsObj.MemberEnd(); ++itr) {
@@ -514,9 +525,9 @@ public:
         }
         free(buffer);
 
-        world->loading(fileIO);
+        //world->loadMap(fileIO);
 
-        loadMap(world->curMap, world->map);
+        //loadMap(world->curMap, world->map);
 
         return true;
     }

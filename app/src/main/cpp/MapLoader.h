@@ -10,11 +10,8 @@
 #include "Map.h"
 #include "TileLayer.h"
 #include "ObjectLayer.h"
+#include "Log.h"
 
-#define  LOG_TAG    "MapLoader"
-#define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG,__VA_ARGS__)
-#define  LOGI(...)  __android_log_print(ANDROID_LOG_INFO,LOG_TAG,__VA_ARGS__)
-#define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR,LOG_TAG,__VA_ARGS__)
 
 class MapLoader {
 
@@ -25,10 +22,10 @@ private:
      */
     const char *read(FileIO *fileIO, const char *fileName) {
 
-        AAsset* file = fileIO->readAssetFile(fileName);
+        AAsset *file = fileIO->readAssetFile(fileName);
         size_t fileLength = static_cast<size_t>(AAsset_getLength(file));
         // Allocate memory to read file
-        char* fileContent = new char[fileLength+1];
+        char *fileContent = new char[fileLength + 1];
         AAsset_read(file, fileContent, fileLength);
         AAsset_close(file);
         fileContent[fileLength] = '\0';
@@ -61,11 +58,32 @@ private:
         return static_cast<unsigned char>(i - 1);
     }
 
+    unsigned char hex2dec(const char *hex) {
+
+        unsigned char res = 0;
+        unsigned char k = 1;
+        for (signed char i = 1; i >= 0; i--) {
+
+            char c = hex[i];
+            unsigned char n = 0;
+            if (c >= '0' && c <= '9') {
+                n = static_cast<unsigned char>(c - '0');
+            } else if (c >= 'A' && c <= 'F') {
+                n = static_cast<unsigned char>(c - 'A' + 10);
+            } else if (c >= 'a' && c <= 'f') {
+                n = static_cast<unsigned char>(c - 'a' + 10);
+            }
+            res += n * k;
+            k *= 16;
+        }
+        return res;
+    }
+
 public:
 
     Map *loadMap(FileIO *fileIO, const char *fileName) {
         using namespace rapidjson;
-        LOGI("World Loading...%s.", fileName);
+        LOGI("MapLoader","World Loading...%s.", fileName);
 
         const char *mapData = read(fileIO, fileName);
 
@@ -74,6 +92,10 @@ public:
 
         delete[] mapData;
 
+        if (strcmp(mapObj["type"].GetString(), "map") != 0) {
+            LOGE("MapLoader","You are not loading a map.");
+        }
+
         unsigned int width = static_cast<unsigned int>(mapObj["width"].GetInt());
 
         unsigned int height = static_cast<unsigned int>(mapObj["height"].GetInt());
@@ -81,6 +103,21 @@ public:
         unsigned int tileHeight = static_cast<unsigned int>(mapObj["tileheight"].GetInt());
 
         unsigned int tileWidth = static_cast<unsigned int>(mapObj["tilewidth"].GetInt());
+
+        // (Optional, default: black) Background Color
+        Vector3 backgroundColor(0,0,0);
+        Value::ConstMemberIterator backgroundColorItr = mapObj.FindMember("backgroundcolor");
+        if (backgroundColorItr != mapObj.MemberEnd()) {
+            const char *backgroundColorHex = backgroundColorItr->value.GetString();
+            if (strlen(backgroundColorHex) == 7) {
+                float red = hex2dec(backgroundColorHex + 1)/255.f;
+                float green = hex2dec(backgroundColorHex + 3)/255.f;
+                float blue = hex2dec(backgroundColorHex + 5)/255.f;
+                backgroundColor = Vector3(red, green, blue);
+            }
+        }
+
+        Vector2 defaultLocation(-1,-1);
 
         /**
          * Parse TileSets
@@ -150,7 +187,9 @@ public:
                     Tile **tiles = new Tile *[dataCount];
                     for (unsigned int j = 0; j < dataCount; j++) {
                         unsigned int gid = static_cast<unsigned int>(dataAry[j].GetInt());
-                        if (gid > 0)
+                        if (gid > firstGid + tileSet->tileCount)
+                            LOGE("MapLoader","Invalid Gid: %d", gid);
+                        else if (gid > 0)
                             tiles[j] = tileSet->tiles[gid - firstGid];
                         else
                             tiles[j] = NULL;
@@ -198,18 +237,28 @@ public:
                     if (objectObj.HasMember("polyline")) {
                         continue;
                     }
-                        // Ellipse (Not supported)
+                    // Ellipse (Not supported)
                     else if (objectObj.HasMember("ellipse")) {
+                        continue;
+                    }
+
+                    const char *objName = objectObj["name"].GetString();
+                    int x = objectObj["x"].GetInt();
+                    int y = objectObj["y"].GetInt();
+
+                    // Point
+                    if (objectObj.HasMember("point")) {
+                        if(strcmp(objName,"defaultLocation") == 0){
+                            defaultLocation = Vector2(x,y);
+                        }
                         continue;
                     }
 
                     unsigned int objId = static_cast<unsigned int>(objectObj["id"].GetInt());
                     const char *objType = objectObj["type"].GetString();
-                    const char *objName = objectObj["name"].GetString();
                     unsigned int objWidth = static_cast<unsigned int>(objectObj["width"].GetInt());
                     unsigned int objHeight = static_cast<unsigned int>(objectObj["height"].GetInt());
-                    int x = objectObj["x"].GetInt();
-                    int y = objectObj["y"].GetInt();
+
                     Tile *tile = NULL;
                     Value::ConstMemberIterator itr = objectObj.FindMember("properties");
                     unsigned char propertyCount = 0;
@@ -230,7 +279,7 @@ public:
                                     objectProperties[k] = new StringProperty(propertyName,
                                                                              prop["value"].GetString());
                                 } else {
-                                    LOGI("Unsupported DataType.");
+                                    LOGI("MapLoader","Unsupported DataType.");
                                 }
                             }
                         }
@@ -247,11 +296,11 @@ public:
                     }
 
                     mapObjectsTemp[objectCount++] = new MapObject(objId, x, y,
-                                                                objType, objName,
-                                                                objWidth, objHeight,
-                                                                tile,
-                                                                propertyCount,
-                                                                objectProperties);
+                                                                  objType, objName,
+                                                                  objWidth, objHeight,
+                                                                  tile,
+                                                                  propertyCount,
+                                                                  objectProperties);
                 }
 
                 // Copy objects
@@ -261,10 +310,8 @@ public:
                 }
                 delete[] mapObjectsTemp;
 
-                LOGI("Object Count:%d", objectCount);
-
                 mapLayersTemp[layerCount++] = new ObjectLayer(layerId, objectCount, mapObjects,
-                                                            tileSetInedx);
+                                                              tileSetInedx);
             }
         }
 
@@ -277,25 +324,27 @@ public:
 
         delete[] tileSetFirstGids;
 
-        LOGI("Map Loaded.");
+        LOGI("MapLoader","Map Loaded.");
 
         return new Map(tileSetCount, tileSets, width, height, tileWidth, tileHeight, collisionLayer,
-                       layerCount, mapLayers);
+                       layerCount, mapLayers, backgroundColor, defaultLocation);
     }
 
     TileSet *loadTileSet(FileIO *fileIO, const char *fileName) {
         using namespace rapidjson;
 
-        LOGI("TileSet Loading...%s.", fileName);
+        LOGI("MapLoader","TileSet Loading...%s.", fileName);
 
         const char *tileSetData = read(fileIO, fileName);
-
-        LOGI("TileSet Data = %s.", tileSetData);
 
         Document tileSetObj;
         tileSetObj.Parse(tileSetData);
 
         delete[] tileSetData;
+
+        if (strcmp(tileSetObj["type"].GetString(), "tileset") != 0) {
+            LOGE("MapLoader","You are not loading a tileset.");
+        }
 
         const char *image = tileSetObj["image"].GetString();
 
@@ -356,7 +405,7 @@ public:
             tiles[tileId] = new Tile(tileId);
             tileId++;
         }
-        LOGI("TileSet Loaded.");
+        LOGI("MapLoader","TileSet Loaded.");
 
         return new TileSet(image, tileCount, columns, tileHeight, tileWidth, imageHeight,
                            imageWidth, tiles);

@@ -11,20 +11,12 @@
 #include "Assets.h"
 #include "EventListener.h"
 #include "Bag.h"
+#include "Db.h"
+#include "ListView.h"
 
-class World final {
+class World final : public ListEventListener {
 
 private:
-
-    EventListener *eventListener;
-
-    MapObject *monster = NULL;
-
-    bool isAccessible(int landform) {
-        return landform == 0;
-    }
-
-public:
 
     enum State : unsigned char {
         NORMAL,
@@ -33,39 +25,65 @@ public:
 
     State state;
 
+    EventListener *eventListener;
+
+    MapObject *monster = NULL;
+
+    unsigned int exp = 100;
+
+    bool isAccessible(int landform) {
+        return landform == 0;
+    }
+
+public:
+
+    Player player;
+
     std::string curMap;
 
     std::string nextMap;
 
-    Vector nextPosition;
+    Vector2 nextPosition;
 
     Map *map = NULL;
-
-    Player player;
 
     float timer = 0;
 
     Bag *bag;
 
-    unsigned int coin = 99999;
+    unsigned int coin = 0;
 
-    unsigned int exp = 99999;
+    Db *db;
 
-    World(EventListener *eventListener) : player(200, 200), nextPosition(0,0), eventListener(eventListener), bag(new Bag()) {
+    std::vector<std::string> visitedList;
 
-        state = LOADING;
-        nextMap = "tiled_map00.json";
-        nextPosition.x = 1792;
-        nextPosition.y = 640;
-        LOGI("World Created.");
+    void put(std::string &mapName){
+
+        for(std::string &n:visitedList){
+            if(n == mapName){
+                return;
+            }
+        }
+        visitedList.push_back(mapName);
     }
 
-    void setPlayerVelocity(Vector v) {
+    World(FileIO *fileIO, EventListener *eventListener) : eventListener(eventListener), player(0, 0), nextPosition(0,0), bag(new Bag()) {
+
+        state = LOADING;
+        nextMap = "m0.json";
+        nextPosition.x = 1056;
+        nextPosition.y = 1440;
+        loadMap(fileIO);
+        db = new Db(fileIO, "data.json");
+        LOGI("World","World Created.");
+    }
+
+    void setPlayerVelocity(Vector2 v) {
 
         player.velocity = v;
     }
 
-    void loading(FileIO *fileIO) {
+    void loadMap(FileIO *fileIO) {
 
         state = LOADING;
         if(map)
@@ -74,9 +92,19 @@ public:
         MapLoader mapLoader;
         map = mapLoader.loadMap(fileIO, nextMap.c_str());
         Assets::load(map);
-        player.position.x = nextPosition.x;
-        player.position.y = nextPosition.y;
+        if(nextPosition.x < 0 || nextPosition.y < 0){
+            player.position.x = map->defaultLocation.x;
+            player.position.y = map->defaultLocation.y;
+        }
+        else{
+            player.position.x = nextPosition.x;
+            player.position.y = nextPosition.y;
+        }
         nextMap.clear();
+
+        if(map->defaultLocation.x > 0 && map->defaultLocation.y >0)
+            put(curMap);
+
         state = NORMAL;
     }
 
@@ -178,15 +206,15 @@ public:
         /**
          * Interact with map objects
          */
-        int layerCount = map->layerCount;
-        for (int i = 0; i < layerCount; i++) {
+        unsigned char layerCount = map->layerCount;
+        for (unsigned char i = 0; i < layerCount; i++) {
             MapLayer *mapLayer = map->layers[i];
 
             if (mapLayer->layerType == MapLayer::OBJECT_LAYER) {
 
                 ObjectLayer *objectLayer = (ObjectLayer *) mapLayer;
 
-                for (int j = 0; j < objectLayer->objectCount; j++) {
+                for (unsigned int j = 0; j < objectLayer->objectCount; j++) {
                     MapObject *object = objectLayer->objects[j];
 
                     float top = player.position.y;
@@ -240,7 +268,7 @@ public:
             if (!(left < right2 && right > left2 && top < bottom2 && bottom > top2)) {
 
                 monster = NULL;
-                eventListener->onEvent(Event::DOOR, 0);
+                eventListener->onReceive(Event::DOOR, NULL);
             }
         }
     }
@@ -250,27 +278,31 @@ public:
         if (object->type == "monster") {
 
             monster = object;
-            eventListener->onEvent(Event::BATTLE, object->getIntProperty("monsterId"));
+            int arg = object->getIntProperty("a");
+            eventListener->onReceive(Event::BATTLE, &arg);
         } else if (object->type == "item") {
 
-            eventListener->onEvent(Event::ITEM, object->getIntProperty("itemId"));
+            int arg = object->getIntProperty("a");
+            eventListener->onReceive(Event::ITEM, &arg);
             objectLayer->remove(object);
         } else if (object->type == "door") {
 
             monster = object;
-            eventListener->onEvent(Event::DOOR, object->getIntProperty("doorType"));
+            int arg = object->getIntProperty("a");
+            eventListener->onReceive(Event::DOOR, &arg);
         } else if (object->type == "transfer") {
 
-            //state = PENDING;
             nextMap = object->getStringProperty("a");
             nextPosition.x = object->getIntProperty("x");
             nextPosition.y = object->getIntProperty("y");
-            eventListener->onEvent(Event::TRANSFER, 0);
+            eventListener->onReceive(Event::TRANSFER, NULL);
         } else if (object->type == "shop") {
 
-            eventListener->onEvent(Event::SHOP, object->getIntProperty("a"));
+            int arg = object->getIntProperty("a");
+            eventListener->onReceive(Event::SHOP, &arg);
         } else{
-            LOGI("Object Type: %s",object->type.c_str());
+
+            LOGI("World","Object Type: %s",object->type.c_str());
         }
     }
 
@@ -302,10 +334,40 @@ public:
         }
     }
 
+    unsigned int getExp() const {
+        return exp;
+    }
+
+    void setExp(unsigned int exp) {
+        World::exp = exp;
+    }
+
+    void accessExp(unsigned int _exp) {
+        exp -= _exp;
+        if(exp<=0){
+            // Level Up
+            player.prop->lv++;
+            exp += player.prop->lv * 100;
+            player.prop->agi++;
+            player.prop->maxHp += 10;
+            player.prop->hp += 10;
+        }
+    }
+
+    void onSelectItem(unsigned int index) override {
+
+        LOGI("World","onSelectItem %d",index);
+        std::string &mapName = visitedList[index];
+        nextMap = mapName;
+        nextPosition = {-1.f,-1.f};
+        eventListener->onReceive(TRANSFER,NULL);
+    }
+
     ~World() {
 
         delete map;
         delete bag;
+        delete db;
     }
 };
 

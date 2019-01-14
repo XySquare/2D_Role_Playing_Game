@@ -9,7 +9,7 @@
 #include "Texture.h"
 #include "Vertex.h"
 #include "TextureRegion.h"
-#include "UnitTexture.h"
+#include "Assets.h"
 
 class SpriteBatcher {
 
@@ -23,18 +23,15 @@ private:
 
 public:
 
-    SpriteBatcher(int maxSprites) {
+    SpriteBatcher(unsigned int maxSprites):bufferIndex(0),numSprites(0) {
 
         verticesBuffer = new GLfloat[4 * 4 * maxSprites];
         vertices = new Vertex(true);
 
-        bufferIndex = 0;
-        numSprites = 0;
-
-        int len = maxSprites * 6;
+        unsigned int len = maxSprites * 6;
         indices = new GLuint[len];
         GLuint j = 0;
-        for (int i = 0; i < len; i += 6, j += 4) {
+        for (unsigned int i = 0; i < len; i += 6, j += 4) {
             indices[i + 0] = (j + 0);
             indices[i + 1] = (j + 1);
             indices[i + 2] = (j + 2);
@@ -53,10 +50,10 @@ public:
         bufferIndex = 0;
     }
 
-    void beginBatch(UnitTexture *texture) {
+    void beginBatch(float r, float g, float b, float a) {
 
-        //glVertexAttrib4f(GRAPHIC_COLOR_HANDEL,1.f,1.f,1.f,1.f);
-        texture->bind();
+        glVertexAttrib4f(GRAPHIC_COLOR_HANDEL,r,g,b,a);
+        Assets::unitTexture->bind();
         numSprites = 0;
         bufferIndex = 0;
     }

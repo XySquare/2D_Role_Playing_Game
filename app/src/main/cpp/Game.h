@@ -6,17 +6,20 @@
 #define RPG2D_GAME_H
 
 
+#include "SpriteBatcher.h"
 #include "FileIO.h"
 #include "MultiTouchHandler.h"
 
 struct Game {
 
+    SpriteBatcher *graphic;
+
     FileIO *fileIO;
 
     MultiTouchHandler *input;
 
-    Game(FileIO *fileIO, MultiTouchHandler *multiTouchHandler) :
-            fileIO(fileIO), input(multiTouchHandler) {}
+    Game(SpriteBatcher *spriteBatcher, FileIO *fileIO, MultiTouchHandler *multiTouchHandler) :
+            graphic(spriteBatcher), fileIO(fileIO), input(multiTouchHandler) {}
 };
 
 

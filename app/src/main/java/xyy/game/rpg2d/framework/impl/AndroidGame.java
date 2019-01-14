@@ -37,19 +37,20 @@ public class AndroidGame extends AppCompatActivity {
         //application.init(this);
 
         //根据设备方向，定义帧缓冲区大小，实例化Bitmap
+        //TODO: In some case, orientation of device could not be determined correctly
         boolean isLandscape = getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
         int frameBufferWidth = isLandscape ? 1280 : 720;
         int frameBufferHeight = isLandscape ? 720 : 1280;
         /*Bitmap frameBuffer = Bitmap.createBitmap(frameBufferWidth,
                 frameBufferHeight, Bitmap.Config.ARGB_8888);*/
-
+        Log.i("AndroidGame", "W/H:"+frameBufferWidth + "," + frameBufferHeight);
         //获取屏幕宽/高
         Point outSize = new Point();
         //if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            //getWindowManager().getDefaultDisplay().getRealSize(outSize);
+        getWindowManager().getDefaultDisplay().getRealSize(outSize);
         //} else
-        getWindowManager().getDefaultDisplay().getSize(outSize);
-        //Log.i("AndroidGame", "Size = " + outSize);
+        //getWindowManager().getDefaultDisplay().getSize(outSize);
+        Log.i("AndroidGame", "Size = " + outSize);
         //计算缩放比例
         float scaleX = (float) frameBufferWidth
                 / outSize.x;

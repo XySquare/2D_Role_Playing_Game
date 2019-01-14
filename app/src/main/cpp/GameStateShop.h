@@ -8,16 +8,12 @@
 
 #include "Game.h"
 #include "World.h"
-#include "SpriteBatcher.h"
-#include "GameScreen.h"
 
-class GameStateShop: public Screen {
+class GameStateShop final : public Screen {
 
 private:
 
     World *world;
-
-    SpriteBatcher *spriteBatcher;
 
     EventListener *eventListener;
 
@@ -25,41 +21,14 @@ private:
 
     char index = 0;
 
-    const float charWidth = 282/16.f;
-
-    void drawChar(float x, float y, char c) {
-
-        const unsigned short textSpriteY = 256;
-        if(c > ' ' && c < 127){
-            c -= ' ';
-            unsigned char row = static_cast<unsigned char>(c / 16);
-            unsigned char col = static_cast<unsigned char>(c % 16);
-            spriteBatcher->drawSprite(x, y, charWidth, 32, TextureRegion(col*charWidth / 512.f, (textSpriteY + row*32) / 512.f, charWidth / 512.f, 32 / 512.f));
-        }
-    }
-
-    void drawText(float x, float y, const char* text){
-
-        unsigned char i = 0;
-        char c;
-        while((c = text[i]) != '\0'){
-            drawChar(x + i*charWidth, y, c);
-            i++;
-        }
-    }
-
-    bool inBound(Touch e, short x, short y, unsigned short width, unsigned short height){
+    bool inBound(Touch e, short x, short y, unsigned short width, unsigned short height) {
         return e.x > x && e.x < x + width && e.y > y && e.y < y + height;
     }
 
 public:
 
-    GameStateShop(Game game, World *world, SpriteBatcher *spriteBatcher, EventListener *eventListener) :
-            Screen(game), world(world), spriteBatcher(spriteBatcher), eventListener(eventListener) {}
-
-    void onEvent(int what, int prop) override {
-
-    }
+    GameStateShop(Game game, World *world, EventListener *eventListener) :
+            Screen(game), world(world), eventListener(eventListener) {}
 
     void resume() override {
 
@@ -69,32 +38,56 @@ public:
 
         std::vector<Touch> &touchEvents = game.input->getTouchEvents();
 
-        for(Touch e : touchEvents) {
-            if (e.action == Action ::TOUCH_DOWN) {
-                if(pointer ==-1){
+        for (Touch e : touchEvents) {
+            if (e.action == Action::TOUCH_DOWN) {
+                if (pointer == -1) {
                     pointer = e.pointer;
-                    if(e.x > 1216 && e.y < 64)
+                    if (e.x > 1216 && e.y < 64){
                         index = 1;
-                    else if(inBound(e,64,64,544,256))
+                    }
+                    else if (inBound(e, 64 + 64, 64 + 96, 544 - 64, 200)){
                         index = 2;
-                    else if(inBound(e,672,64,544,256))
+                    }
+                    else if (inBound(e, 672, 64 + 96, 544 - 64, 200)){
                         index = 3;
-                    else if(inBound(e,64,384,544,256))
+                    }
+                    else if (inBound(e, 64 + 64, 64 + 96 + 200 + 64, 544 - 64, 200)){
                         index = 4;
+                    }
                     else
                         index = 0;
                 }
             } else if (e.action == Action::TOUCH_UP) {
-                if(pointer == e.pointer) {
+                if (pointer == e.pointer) {
                     pointer = -1;
-                    if(e.x > 1216 && e.y < 64 && index == 1)
-                        eventListener->onEvent(Event::RUNNING, 0);
-                    else if(inBound(e,64,64,544,256) &&  index == 2)
-                        ;//mStage.buyPoison();
-                    else if(inBound(e,672,64,544,256) && index == 3)
-                        ;//mStage.buyMaxHpStone();
-                    else if(inBound(e,64,384,544,256) && index == 4)
-                        ;//mStage.buyAtkStone();
+                    if (e.x > 1216 && e.y < 64 && index == 1)
+                        eventListener->onReceive(Event::RUNNING, NULL);
+                    else if (inBound(e, 64 + 64, 64 + 96, 544 - 64, 200) && index == 2) {
+                        if (world->coin >= 25) {
+                            world->coin -= 25;
+                            world->player.prop->atk += 2;
+                        }
+                        else{
+                            eventListener->onReceive(NOTIFICATION, "Not enough coin");
+                        }
+                    } else if (inBound(e, 672, 64 + 96, 544 - 64, 200) && index == 3) {
+                        if (world->coin >= 25) {
+                            world->coin -= 25;
+                            world->player.prop->def += 2;
+                        }
+                        else{
+                            eventListener->onReceive(NOTIFICATION, "Not enough coin");
+                        }
+                    } else if (inBound(e, 64 + 64, 64 + 96 + 200 + 64, 544 - 64, 200) && index == 4) {
+                        if (world->coin >= 10) {
+                            world->coin -= 10;
+                            world->bag->potion_s++;
+                        }
+                        else{
+                            eventListener->onReceive(NOTIFICATION, "Not enough coin");
+                        }
+                    }
+                    index = 0;
                     break;
                 }
             }
@@ -103,34 +96,76 @@ public:
 
     void present() override {
 
+        SpriteBatcher *spriteBatcher = game.graphic;
+
         // Background
-        spriteBatcher->beginBatch(Assets::unitTexture);
-        glVertexAttrib4f(GRAPHIC_COLOR_HANDEL, 0.f, 0.f, 0.f, .5f);
+        spriteBatcher->beginBatch(0.f, 0.f, 0.f, .5f);
         spriteBatcher->drawSprite(0, 0, 1280, 720, TextureRegion(0, 0, 1, 1));
         spriteBatcher->endBatch();
 
+        // UI
         spriteBatcher->beginBatch(Assets::ui);
 
         // Close
-        spriteBatcher->drawSprite(1280-64, 0, 64, 64,
-                                  TextureRegion(448/512.f, 64/512.f, 64/512.f, 64/512.f));
+        spriteBatcher->drawSprite(1216, 0, 64, 64,
+                                  TextureRegion(448 / 512.f, 64 / 512.f, 64 / 512.f, 64 / 512.f));
 
-        drawText(1280/2-charWidth*2,64+32,"SHOP");
+        // Title
+        FontHelper::drawText(spriteBatcher, 604.75f, 64 + 32, "SHOP");
 
-        spriteBatcher->drawSprite(64+64,64+96,544-64,200,
-                                  TextureRegion(320/512.f, 352/512.f, 192/512.f, 32/512.f));
+        // Coin
+        spriteBatcher->drawSprite(1072 - 90-64, 64 + 32-8, 48, 48,
+                                  TextureRegion(0 / 512.f, (448) / 512.f, 64 / 512.f,
+                                                64 / 512.f));
+        FontHelper::drawNumber(spriteBatcher,1216-64, 64 + 32, world->coin);
 
-        drawText(64+64+16+64+16,64+96+16,"ATK +2");
+        if (index == 2)
+            spriteBatcher->drawSprite(64 + 64, 64 + 96, 544 - 64, 200,
+                                      TextureRegion((384 + 64) / 512.f, 128 / 512.f, 64 / 512.f,
+                                                    64 / 512.f));
+        else
+            spriteBatcher->drawSprite(64 + 64, 64 + 96, 544 - 64, 200,
+                                      TextureRegion(384 / 512.f, 128 / 512.f, 64 / 512.f,
+                                                    64 / 512.f));
+        spriteBatcher->drawSprite(64 + 64 + 16, 64 + 96 + 16, 64, 64,
+                                  TextureRegion(384 / 512.f, 448 / 512.f, 64 / 512.f,
+                                                64 / 512.f));
+        FontHelper::drawText(spriteBatcher,64 + 64 + 16 + 64 + 16, 64 + 96 + 16, "ATK +2");
+        FontHelper::drawText(spriteBatcher,64 + 64 + 16 + 64 + 16, 64 + 96 + 16 + 32 + 16, "25 G");
 
-        drawText(64+64+16+64+16,64+96+16+32+16,"25 G");
+        if (index == 3)
+            spriteBatcher->drawSprite(672, 64 + 96, 544 - 64, 200,
+                                      TextureRegion((384 + 64) / 512.f, 128 / 512.f, 64 / 512.f,
+                                                    64 / 512.f));
+        else
+            spriteBatcher->drawSprite(672, 64 + 96, 544 - 64, 200,
+                                      TextureRegion(384 / 512.f, 128 / 512.f, 64 / 512.f,
+                                                    64 / 512.f));
+        spriteBatcher->drawSprite(672 + 16, 64 + 96 + 16, 64, 64,
+                                  TextureRegion(448 / 512.f, 448 / 512.f, 64 / 512.f,
+                                                64 / 512.f));
+        FontHelper::drawText(spriteBatcher,672 + 16 + 64 + 16, 64 + 96 + 16, "DEF +2");
+        FontHelper::drawText(spriteBatcher,672 + 16 + 64 + 16, 64 + 96 + 16 + 32 + 16, "25 G");
 
-        spriteBatcher->drawSprite(672,64+96,544-64,200,
-                                  TextureRegion(320/512.f, 352/512.f, 192/512.f, 32/512.f));
-
-        spriteBatcher->drawSprite(64+64,64+96+200+64,544-64,200,
-                                  TextureRegion(320/512.f, 352/512.f, 192/512.f, 32/512.f));
+        if (index == 4)
+            spriteBatcher->drawSprite(64 + 64, 64 + 96 + 200 + 64, 544 - 64, 200,
+                                      TextureRegion((384 + 64) / 512.f, 128 / 512.f, 64 / 512.f,
+                                                    64 / 512.f));
+        else
+            spriteBatcher->drawSprite(64 + 64, 64 + 96 + 200 + 64, 544 - 64, 200,
+                                      TextureRegion(384 / 512.f, 128 / 512.f, 64 / 512.f,
+                                                    64 / 512.f));
+        spriteBatcher->drawSprite(64 + 64 + 16, 64 + 96 + 200 + 64 + 16, 64, 64,
+                                  TextureRegion(256 / 512.f, 448 / 512.f, 64 / 512.f,
+                                                64 / 512.f));
+        FontHelper::drawText(spriteBatcher,64 + 64 + 16 + 64 + 16, 64 + 96 + 200 + 64 + 16, "Potion (S)");
+        FontHelper::drawText(spriteBatcher,64 + 64 + 16 + 64 + 16, 64 + 96 + 200 + 64 + 16 + 32 + 16, "10 G");
 
         spriteBatcher->endBatch();
+    }
+
+    void onReceive(Event what, const void *arg) override {
+
     }
 };
 

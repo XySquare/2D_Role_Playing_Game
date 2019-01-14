@@ -7,10 +7,7 @@
 
 
 #include "Screen.h"
-#include "Texture.h"
-#include "Vertex.h"
-#include "SpriteBatcher.h"
-#include "Vector.h"
+#include "Vector2.h"
 #include "World.h"
 #include "WorldRenderer.h"
 #include "EventListener.h"
@@ -19,8 +16,11 @@
 #include "GameStateRunning.h"
 #include "GameStatePause.h"
 #include "GameStateShop.h"
+#include "GameStateMonsterInfo.h"
+#include "GameStateTitle.h"
+#include "Notification.h"
 
-class GameScreen : public Screen {
+class GameScreen final : public Screen {
 
 private:
 
@@ -28,32 +28,33 @@ private:
 
     WorldRenderer *worldRenderer;
 
-    SpriteBatcher *spriteBatcher;
-
-public:
+    Notification *notification;
 
     Screen *gameState;
 
+public:
+
     GameScreen(Game game) : Screen(game) {
 
-        world = new World(this);
+        world = new World(game.fileIO, this);
 
-        spriteBatcher = new SpriteBatcher(1024);
+        worldRenderer = new WorldRenderer(world, game.graphic);
 
-        worldRenderer = new WorldRenderer(world, spriteBatcher);
+        gameState = new GameStateTitle(game, world, this);
 
-        gameState = new GameStateRunning(game, world, spriteBatcher, this);
-
-        world->loading(game.fileIO);
+        notification = new Notification();
     }
 
     void resume() override {
 
+        worldRenderer->resume();
     }
 
     void update(float deltaTime) override {
 
         gameState->update(deltaTime);
+
+        notification->update(deltaTime);
     }
 
     void present() override {
@@ -61,43 +62,68 @@ public:
         worldRenderer->render();
 
         gameState->present();
+
+        notification->present(game.graphic);
     }
 
-    virtual void onEvent(int what, int prop) override {
-        LOGI("onEvent(%d,%d)",what,prop);
-        world->setPlayerVelocity(Vector(0,0));
+    virtual void onReceive(Event what, const void *arg) override {
 
-        if(what == Event::RUNNING){
+        world->setPlayerVelocity(Vector2(0, 0));
+
+        if (what == RUNNING) {
             delete gameState;
-            gameState = new GameStateRunning(game, world, spriteBatcher, this);
-        }else if(what == Event::TRANSFER){
+            gameState = new GameStateRunning(game, world, this);
+        } else if (what == TRANSFER) {
             delete gameState;
-            gameState = new GameStateTransfer(game, world, spriteBatcher, this);
-        }else if(what == Event::BATTLE){
+            gameState = new GameStateTransfer(game, world, this);
+        } else if (what == BATTLE) {
             delete gameState;
-            gameState = new GameStateBattle(game, world, spriteBatcher, this, prop);
-        }else if(what == Event::PAUSE){
+            gameState = new GameStateBattle(game, world, this, *((int *) arg));
+        } else if (what == SHOP) {
             delete gameState;
-            gameState = new GameStatePause(game, world, spriteBatcher, this);
-        }else if(what == Event::ITEM){
+            gameState = new GameStateShop(game, world, this);
+        } else if (what == PAUSE) {
+            delete gameState;
+            gameState = new GameStatePause(game, world, this);
+        } else if (what == MONSTER_INFO) {
+            delete gameState;
+            Vector2 *v = (Vector2 *) arg;
+            gameState = new GameStateMonsterInfo(game, world, this,
+                                                 static_cast<unsigned int>(v->x), v->y < 640);
+        } else if (what == ITEM) {
             // ... DO NOT delete gameState when encounter an item
-            // ItemID
-            if(prop == 1){
-                //world.player.prop->agi += 10;
-                world->bag->key[0]++;
+            int itemId = *((int *) arg);
+            // Keys
+            if (itemId >= 1 && itemId <= 3) {
+                world->bag->key[itemId - 1]++;
             }
-        }else if(what == Event::SHOP){
-            delete gameState;
-            gameState = new GameStateShop(game, world, spriteBatcher, this);
-        }else{
-            gameState->onEvent(what, prop);
+            // Potion (S)
+            else if (itemId == 4) {
+                world->bag->potion_s++;
+            }
+            // Potion (L)
+            else if (itemId == 5) {
+                world->bag->potion_l++;
+            }
+        } else if (what == LOAD_MAP) {
+            world->loadMap(game.fileIO);
+            SaveDataHelper::loadMap(world->curMap, world->map);
+            worldRenderer->resume();
+        } else if (what == ESCAPE) {
+            delete world;
+            world = new World(game.fileIO, this);
+            SaveDataHelper::clear();
+            worldRenderer->resume();
+        } else if (what == NOTIFICATION) {
+            notification->newNotice((const char *) arg);
+        } else {
+            gameState->onReceive(what, arg);
         }
     }
 
     virtual ~GameScreen() override {
 
         delete world;
-        delete spriteBatcher;
         delete worldRenderer;
         delete gameState;
     }

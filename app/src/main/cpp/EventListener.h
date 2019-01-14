@@ -13,14 +13,18 @@ enum Event: unsigned char {
     BATTLE,
     DOOR,
     PAUSE,
-    SHOP
+    SHOP,
+    LOAD_MAP,
+    ESCAPE,
+    NOTIFICATION,
+    MONSTER_INFO
 };
 
 class EventListener {
 
 public:
 
-    virtual void onEvent(int what, int prop) = 0;
+    virtual void onReceive(Event what, const void *arg) = 0;
 
     virtual ~EventListener() {
 

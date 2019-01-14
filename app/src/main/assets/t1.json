@@ -1,0 +1,72 @@
+{ "columns":8,
+ "image":"t1.png",
+ "imageheight":1024,
+ "imagewidth":512,
+ "margin":0,
+ "name":"t1",
+ "spacing":0,
+ "terrains":[
+        {
+         "name":"Wall",
+         "tile":72
+        }],
+ "tilecount":128,
+ "tiledversion":"1.2.1",
+ "tileheight":64,
+ "tiles":[
+        {
+         "id":72,
+         "terrain":[-1, -1, -1, 0]
+        }, 
+        {
+         "id":73,
+         "terrain":[-1, -1, 0, 0]
+        }, 
+        {
+         "id":74,
+         "terrain":[-1, -1, 0, -1]
+        }, 
+        {
+         "id":75,
+         "terrain":[0, 0, 0, -1]
+        }, 
+        {
+         "id":76,
+         "terrain":[0, 0, -1, 0]
+        }, 
+        {
+         "id":80,
+         "terrain":[-1, 0, -1, 0]
+        }, 
+        {
+         "id":81,
+         "terrain":[0, 0, 0, 0]
+        }, 
+        {
+         "id":82,
+         "terrain":[0, -1, 0, -1]
+        }, 
+        {
+         "id":83,
+         "terrain":[0, -1, 0, 0]
+        }, 
+        {
+         "id":84,
+         "terrain":[-1, 0, 0, 0]
+        }, 
+        {
+         "id":88,
+         "terrain":[-1, 0, -1, -1]
+        }, 
+        {
+         "id":89,
+         "terrain":[0, 0, -1, -1]
+        }, 
+        {
+         "id":90,
+         "terrain":[0, -1, -1, -1]
+        }],
+ "tilewidth":64,
+ "type":"tileset",
+ "version":1.2
+}

@@ -9,6 +9,7 @@
 #include "Texture.h"
 #include "Map.h"
 #include "UnitTexture.h"
+#include "Log.h"
 
 class Assets {
 
@@ -43,7 +44,7 @@ public:
         for(int i=0;i<tileSetCount;i++){
             tileSetTextures[i]->load();
         }
-        LOGI("Assets Loaded.");
+        LOGI("Assets","Assets Loaded.");
     }
 
     static void load(Map *map){
@@ -61,7 +62,7 @@ public:
             tileSetTextures[i] = new Texture(jniEnv, map->tileSets[i]->image);
             tileSetTextures[i]->load();
         }
-        LOGI("Map Assets Loaded.");
+        LOGI("Assets","Map Assets Loaded.");
     }
 };
 

@@ -12,9 +12,9 @@ class DynamicGameObject: public GameObject {
 
 public:
 
-    Vector velocity;
+    Vector2 velocity;
 
-    DynamicGameObject(float x, float y) : GameObject(x, y), velocity(Vector(0,0)) {}
+    DynamicGameObject(float x, float y) : GameObject(x, y), velocity(Vector2(0,0)) {}
 
     virtual ~DynamicGameObject() override {
 

@@ -10,9 +10,11 @@ class Bag {
 
 public:
 
-    unsigned short key[3] = {99, 99, 99};
+    unsigned short key[3] = {0, 0, 0};
 
-    unsigned char potion = 99;
+    unsigned char potion_s = 0;
+
+    unsigned char potion_l = 0;
 };
 
 

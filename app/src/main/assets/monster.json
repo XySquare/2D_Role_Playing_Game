@@ -1,11 +1,11 @@
-{ "columns":4,
+{ "columns":16,
  "image":"monster.png",
- "imageheight":256,
- "imagewidth":256,
+ "imageheight":1024,
+ "imagewidth":1024,
  "margin":0,
  "name":"monster",
  "spacing":0,
- "tilecount":16,
+ "tilecount":256,
  "tiledversion":"1.2.1",
  "tileheight":64,
  "tiles":[
@@ -28,6 +28,26 @@
                  "tileid":3
                 }],
          "id":0
+        }, 
+        {
+         "animation":[
+                {
+                 "duration":250,
+                 "tileid":4
+                }, 
+                {
+                 "duration":250,
+                 "tileid":5
+                }, 
+                {
+                 "duration":250,
+                 "tileid":6
+                }, 
+                {
+                 "duration":250,
+                 "tileid":7
+                }],
+         "id":4
         }],
  "tilewidth":64,
  "type":"tileset",

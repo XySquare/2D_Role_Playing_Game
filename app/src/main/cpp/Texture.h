@@ -15,10 +15,11 @@ class Texture {
 private:
 
     JNIEnv *const env;
-    std::string fileName;
     GLuint textureId;
 
 public:
+
+    const std::string fileName;
 
     Texture(JNIEnv *const env, std::string fileName) : env(env), fileName(fileName) {}
 

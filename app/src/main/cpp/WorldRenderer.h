@@ -9,6 +9,7 @@
 #include "World.h"
 #include "SpriteBatcher.h"
 #include "Assets.h"
+#include "Log.h"
 
 class WorldRenderer {
 
@@ -22,6 +23,13 @@ public:
 
     WorldRenderer(World *world, SpriteBatcher *spriteBatcher) : world(world),
                                                                 spriteBatcher(spriteBatcher) {}
+
+    void resume() {
+
+        LOGI("WorldRenderer","Resume.");
+        // Set the backgroundcolor of this map
+        glClearColor(world->map->backgroundColor.x, world->map->backgroundColor.y, world->map->backgroundColor.z, 1.0f);
+    }
 
     void render(float offsetX, float offsetY) {
 

@@ -12,15 +12,15 @@ class Monster {
 
 public:
 
-    int gid;
+    unsigned int gid;
 
     Property *prop;
 
-    int coin;
+    signed short coin;
 
-    int exp;
+    unsigned short exp;
 
-    Monster(int gid, Property *prop, int coin, int exp) : gid(gid), prop(prop), coin(coin),
+    Monster(unsigned int gid, Property *prop, signed short coin, unsigned short exp) : gid(gid), prop(prop), coin(coin),
                                                           exp(exp) {}
 
     virtual ~Monster() {

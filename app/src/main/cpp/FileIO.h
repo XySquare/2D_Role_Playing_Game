@@ -13,9 +13,9 @@ class FileIO {
 
 private:
 
-    AAssetManager *const aAssetManager;
-
     const std::string externalFilesDir;
+
+    AAssetManager *const aAssetManager;
 
 public:
 
