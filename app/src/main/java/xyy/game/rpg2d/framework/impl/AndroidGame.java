@@ -6,11 +6,15 @@ import android.graphics.Point;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
+
+import java.io.File;
 
 /**
  * AndroidGame抽象类
@@ -20,7 +24,12 @@ import android.view.WindowManager;
  */
 public class AndroidGame extends AppCompatActivity {
 
-    //private static final String DIALOG_SINGLE = "dialog_single";
+    // Used to load the native library on application startup.
+    static {
+        System.loadLibrary("jniLib");
+    }
+
+    private static final String DIALOG_WEBVIEW = "dialog_webview";
 
     private AndroidFastRenderView renderView;
     //private Audio audio;
@@ -58,13 +67,25 @@ public class AndroidGame extends AppCompatActivity {
                 / outSize.y;
 
         renderView = new AndroidFastRenderView(this);
-        new AndroidFileIO(this);
         //audio = null;//new AndroidAudio(this, fileIO);
         renderView.setOnTouchListener(new AndroidInput(scaleX, scaleY));
 
         setContentView(renderView);
 
         AssetManager = getAssets();
+
+        String externalStoragePath = null;
+        File externalFilesDir = getExternalFilesDir(null);
+        if (externalFilesDir != null) {
+            // External Storage Path/外部储存路径
+            externalStoragePath = externalFilesDir.toString();
+            if(!externalStoragePath.endsWith(File.separator))
+                externalStoragePath += File.separatorChar;
+        } else {
+            Log.e("FileIO", "External storage unavailable.");
+        }
+
+        setup(externalStoragePath, getAssets());
     }
 
     /*
@@ -111,11 +132,13 @@ public class AndroidGame extends AppCompatActivity {
         renderView.onPause();
     }
 
-    /*public void showDialog(DialogFragment dialogFragment) {
+    public void showWebView(String url) {
         FragmentManager manager = getSupportFragmentManager();
         FragmentTransaction ft = manager.beginTransaction();
-        ft.add(dialogFragment, DIALOG_SINGLE);
+        ft.add(WebViewDialogFragment.newInstance(url), DIALOG_WEBVIEW);
         ft.commit();
-    }*/
+    }
+
+    public native void setup(String externalFilesDir, AssetManager assets);
 
 }

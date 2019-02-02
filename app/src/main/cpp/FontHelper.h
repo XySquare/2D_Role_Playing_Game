@@ -21,15 +21,13 @@ public:
         const unsigned short FONT_SPRITE_Y = 288;
         if (num == 0)
             spriteBatcher->drawSprite(x - CHAR_WIDTH, y, CHAR_WIDTH, 32,
-                                      TextureRegion(0, FONT_SPRITE_Y / 512.f,
-                                                    CHAR_WIDTH / 512.f, 32 / 512.f));
+                                      TextureRegion(0, FONT_SPRITE_Y, CHAR_WIDTH, 32));
         else {
             unsigned char i = 0;
             while (num != 0) {
                 spriteBatcher->drawSprite(x - CHAR_WIDTH * i - CHAR_WIDTH, y, CHAR_WIDTH, 32,
-                                          TextureRegion(CHAR_WIDTH / 512.f * (num % 10),
-                                                        FONT_SPRITE_Y / 512.f,
-                                                        CHAR_WIDTH / 512.f, 32 / 512.f));
+                                          TextureRegion(CHAR_WIDTH * (num % 10), FONT_SPRITE_Y,
+                                                        CHAR_WIDTH, 32));
                 num = num / 10;
                 i++;
             }
@@ -44,9 +42,8 @@ public:
             unsigned char row = static_cast<unsigned char>(c / 16);
             unsigned char col = static_cast<unsigned char>(c % 16);
             spriteBatcher->drawSprite(x, y, CHAR_WIDTH, 32,
-                                      TextureRegion(col * CHAR_WIDTH / 512.f,
-                                                    (textSpriteY + row * 32) / 512.f,
-                                                    CHAR_WIDTH / 512.f, 32 / 512.f));
+                                      TextureRegion(col * CHAR_WIDTH, textSpriteY + row * 32,
+                                                    CHAR_WIDTH, 32));
         }
     }
 

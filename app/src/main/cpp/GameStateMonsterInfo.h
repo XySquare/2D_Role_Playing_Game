@@ -56,7 +56,7 @@ public:
         spriteBatcher->drawSprite(0, 0, 1280, 720, TextureRegion(0, 0, 1, 1));
         spriteBatcher->endBatch();
 
-        unsigned short x = isRight ? 910 : 64;
+        unsigned short x = static_cast<unsigned short>(isRight ? 910 : 64);
 
         spriteBatcher->beginBatch(Assets::ui);
 
@@ -74,9 +74,9 @@ public:
         FontHelper::drawNumber(spriteBatcher, x + 306, 320, monster->prop->agi);
 
         // Coin
-        spriteBatcher->drawSprite(x, 384 - 8, 48, 48,
-                                  TextureRegion(0 / 512.f, (448) / 512.f, 64 / 512.f,
-                                                64 / 512.f));
+        spriteBatcher->drawSprite(x, 376, 48, 48,
+                                  TextureRegion(0, (448), 64,
+                                                64));
         FontHelper::drawNumber(spriteBatcher, x + 306, 384, monster->coin);
 
         FontHelper::drawText(spriteBatcher, x, 448, "EXP");

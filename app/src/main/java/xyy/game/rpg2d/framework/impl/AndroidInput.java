@@ -3,7 +3,7 @@ package xyy.game.rpg2d.framework.impl;
 import android.view.MotionEvent;
 import android.view.View;
 
-import xyy.game.rpg2d.framework.GL2JNILib;
+import xyy.game.rpg2d.framework.JNILib;
 
 /**
  * Created by ${XYY} on ${2016/3/5}.
@@ -31,16 +31,16 @@ public final class AndroidInput implements View.OnTouchListener {
         switch (action) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_POINTER_DOWN:
-                GL2JNILib.onTouch(pointerId, (short) 0, x, y);
+                JNILib.onTouch(pointerId, (short) 0, x, y);
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_POINTER_UP:
             case MotionEvent.ACTION_CANCEL:
-                GL2JNILib.onTouch(pointerId, (short) 1, x, y);
+                JNILib.onTouch(pointerId, (short) 1, x, y);
                 break;
 
             case MotionEvent.ACTION_MOVE:
-                GL2JNILib.onTouch(pointerId, (short) 2, x, y);
+                JNILib.onTouch(pointerId, (short) 2, x, y);
                 break;
         }
         return true;

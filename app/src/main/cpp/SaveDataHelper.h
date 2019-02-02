@@ -12,6 +12,31 @@
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 
+#define _Bag "b"
+#define Key "k"
+#define PotionS "s"
+#define PotionL "l"
+#define Coin "c"
+#define VisitedMaps "v"
+#define CurrentMap "u"
+#define Exp "e"
+#define _Player "p"
+#define Position "o"
+#define Property "r"
+#define Agi "g"
+#define Atk "t"
+#define Def "d"
+#define Hp "h"
+#define MaxHp "m"
+#define Id "i"
+#define _Type "t"
+#define Name "n"
+#define Width "w"
+#define Height "h"
+#define Gid "g"
+#define Objects "o"
+#define Maps "m"
+
 class MapObjectSav {
 
 public:
@@ -61,7 +86,7 @@ public:
             }
             properties = objectProperties;
         } else {
-            properties = NULL;
+            properties = nullptr;
         }
 
     }
@@ -151,12 +176,12 @@ private:
                 return mapSavs[k];
             }
         }
-        return NULL;
+        return nullptr;
     }
 
 public:
 
-    static void clear(){
+    static void clear() {
 
         for (MapSav *m:mapSavs) {
             delete m;
@@ -214,63 +239,64 @@ public:
         Value keyAry(kArrayType);
         for (unsigned char i = 0; i < 3; i++)
             keyAry.PushBack(bag->key[i], allocator);
-        bagObj.AddMember("key", keyAry, allocator);
+        bagObj.AddMember(Key, keyAry, allocator);
         // Bag/Potion
-        bagObj.AddMember("potion_s", bag->potion_s, allocator);
-        bagObj.AddMember("potion_l", bag->potion_l, allocator);
-        worldObj.AddMember("bag", bagObj, allocator);
+        bagObj.AddMember(PotionS, bag->potion_s, allocator);
+        bagObj.AddMember(PotionL, bag->potion_l, allocator);
+        worldObj.AddMember(_Bag, bagObj, allocator);
 
         // Coin
-        worldObj.AddMember("coin", world->coin, allocator);
+        worldObj.AddMember(Coin, world->coin, allocator);
 
         // Current Map
-        worldObj.AddMember("curMap", Value(world->curMap.c_str(), allocator).Move(), allocator);
+        worldObj.AddMember(CurrentMap, Value(world->curMap.c_str(), allocator).Move(), allocator);
 
         // Exp
-        worldObj.AddMember("exp", world->getExp(), allocator);
+        worldObj.AddMember(Exp, world->getExp(), allocator);
 
         // Player
         Value playerObj(kObjectType);
         // Player/Position
         Value playerPositionObj(kObjectType);
-        playerPositionObj.AddMember("x", player.position.x, allocator);
-        playerPositionObj.AddMember("y", player.position.y, allocator);
-        playerObj.AddMember("position", playerPositionObj, allocator);
+        playerPositionObj.AddMember("x", static_cast<int>(player.position.x), allocator);
+        playerPositionObj.AddMember("y", static_cast<int>(player.position.y), allocator);
+        playerObj.AddMember(Position, playerPositionObj, allocator);
         // Player/Property
         Value playerPropertyObj(kObjectType);
-        playerPropertyObj.AddMember("agi", player.prop->agi, allocator);
-        playerPropertyObj.AddMember("atk", player.prop->atk, allocator);
-        playerPropertyObj.AddMember("def", player.prop->def, allocator);
-        playerPropertyObj.AddMember("hp", player.prop->hp, allocator);
-        playerPropertyObj.AddMember("maxHp", player.prop->maxHp, allocator);
-        playerObj.AddMember("property", playerPropertyObj, allocator);
-        worldObj.AddMember("player", playerObj, allocator);
+        playerPropertyObj.AddMember(Agi, player.prop->agi, allocator);
+        playerPropertyObj.AddMember(Atk, player.prop->atk, allocator);
+        playerPropertyObj.AddMember(Def, player.prop->def, allocator);
+        playerPropertyObj.AddMember(Hp, player.prop->hp, allocator);
+        playerPropertyObj.AddMember(MaxHp, player.prop->maxHp, allocator);
+        playerObj.AddMember(Property, playerPropertyObj, allocator);
+        worldObj.AddMember(_Player, playerObj, allocator);
 
         // Maps
         Value mapsObj(kObjectType);
         for (MapSav *m:mapSavs) {
             std::string mapId = m->id;
-            // Layers
+            // Maps/Layers
             Value layerAry(kArrayType);
             for (unsigned char i = 0; i < m->layerCount; i++) {
-                // Layer
+                // Layers/Layer
                 Value layerObj(kObjectType);
-
+                // Layer/Objects
                 Value objectAry(kArrayType);
                 ObjectLayerSav *layerSav = m->layers[i];
                 for (int j = 0; j < layerSav->objectCount; j++) {
                     MapObjectSav *objectSav = layerSav->objects[j];
+                    // Objects/Object
                     Value mapObjectObj(kObjectType);
-                    mapObjectObj.AddMember("id", objectSav->id, allocator);
+                    mapObjectObj.AddMember(Id, objectSav->id, allocator);
                     mapObjectObj.AddMember("x", objectSav->x, allocator);
                     mapObjectObj.AddMember("y", objectSav->y, allocator);
-                    mapObjectObj.AddMember("type", Value(objectSav->type.c_str(), allocator).Move(),
+                    mapObjectObj.AddMember(_Type, Value(objectSav->type.c_str(), allocator).Move(),
                                            allocator);
-                    mapObjectObj.AddMember("name", Value(objectSav->name.c_str(), allocator).Move(),
+                    mapObjectObj.AddMember(Name, Value(objectSav->name.c_str(), allocator).Move(),
                                            allocator);
-                    mapObjectObj.AddMember("width", objectSav->width, allocator);
-                    mapObjectObj.AddMember("height", objectSav->height, allocator);
-                    mapObjectObj.AddMember("gid", objectSav->gid, allocator);
+                    mapObjectObj.AddMember(Width, objectSav->width, allocator);
+                    mapObjectObj.AddMember(Height, objectSav->height, allocator);
+                    mapObjectObj.AddMember(Gid, objectSav->gid, allocator);
 
                     if (objectSav->propertyCount > 0) {
                         Value propertiesObj(kObjectType);
@@ -291,21 +317,27 @@ public:
                             }
                         }
 
-                        mapObjectObj.AddMember("properties", propertiesObj, allocator);
+                        mapObjectObj.AddMember(Property, propertiesObj, allocator);
                     }
 
                     objectAry.PushBack(mapObjectObj, allocator);
                 }
 
-                layerObj.AddMember("id", layerSav->id, allocator);
-                layerObj.AddMember("objects", objectAry, allocator);
+                layerObj.AddMember(Id, layerSav->id, allocator);
+                layerObj.AddMember(Objects, objectAry, allocator);
 
                 layerAry.PushBack(layerObj, allocator);
             }
 
             mapsObj.AddMember(Value(mapId.c_str(), allocator).Move(), layerAry, allocator);
         }
-        worldObj.AddMember("maps", mapsObj, allocator);
+        worldObj.AddMember(Maps, mapsObj, allocator);
+
+        // visitedList
+        Value visitedMapAry(kArrayType);
+        for (std::string m:world->visitedList)
+            visitedMapAry.PushBack(Value(m.c_str(), allocator).Move(), allocator);
+        worldObj.AddMember(VisitedMaps, visitedMapAry, allocator);
 
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
@@ -313,7 +345,8 @@ public:
 
         const char *str = buffer.GetString();
 
-        FILE *file = fileIO->writeFile("SaveData");
+        const char* tmpFilePath = fileIO->getExternalFilePath("savedata.tmp").c_str();
+        FILE *file = fopen(tmpFilePath, "w");
         if (!file) {
             return false;
         }
@@ -323,6 +356,13 @@ public:
             return false;
         }
         fclose(file);
+        if (rename(tmpFilePath,
+                   fileIO->getExternalFilePath("savedata").c_str()) != 0) {
+            LOGE("SaveData", "Error renaming tmp file.");
+            return false;
+        }
+        //if (remove(tmpFilePath) != 0)
+            //LOGE("SaveData", "Error deleting tmp file");
 
         return true;
     }
@@ -341,7 +381,7 @@ public:
                 unsigned char layerId = objectLayer->id;
 
                 //Get a saved layer matching the ID
-                ObjectLayerSav *objectLayerSav = NULL;
+                ObjectLayerSav *objectLayerSav = nullptr;
                 for (unsigned char j = 0; j < mapSav->layerCount; j++) {
                     if (mapSav->layers[j]->id == layerId) {
                         objectLayerSav = mapSav->layers[j];
@@ -365,10 +405,10 @@ public:
                     int x = mapObjectSav->x;
                     int y = mapObjectSav->y;
 
-                    Tile *tile = NULL;
+                    Tile *tile = nullptr;
 
                     unsigned char propertyCount = mapObjectSav->propertyCount;
-                    ObjectProperty **objectProperties = NULL;
+                    ObjectProperty **objectProperties = nullptr;
                     if (propertyCount > 0) {
                         objectProperties = new ObjectProperty *[propertyCount];
                         for (unsigned char m = 0; m < propertyCount; m++) {
@@ -410,7 +450,7 @@ public:
 
     static bool load(FileIO *fileIO, World *world) {
 
-        FILE *file = fileIO->readFile("SaveData");
+        FILE *file = fopen(fileIO->getExternalFilePath("savedata").c_str(), "r");
 
         if (!file) {
             return false;
@@ -420,10 +460,10 @@ public:
         unsigned long length = static_cast<unsigned long>(ftell(file));
         fseek(file, 0, SEEK_SET);
         char *buffer = static_cast<char *>(malloc(length + 1));
-        if(!buffer){
+        if (!buffer) {
             return false;
         }
-        if(fread(buffer, 1, length, file) != length){
+        if (fread(buffer, 1, length, file) != length) {
             fclose(file);
             return false;
         }
@@ -438,28 +478,30 @@ public:
 
         Document worldObj;
         worldObj.Parse(buffer);
-        Value &bagObj = worldObj["bag"];
-        Value &keyAry = bagObj["key"];
+        free(buffer);
+
+        Value &bagObj = worldObj[_Bag];
+        Value &keyAry = bagObj[Key];
         for (unsigned char i = 0; i < 3; i++)
-            bag->key[i] = (unsigned short) keyAry[i].GetInt();
-        bag->potion_s = static_cast<unsigned char>(bagObj["potion_s"].GetInt());
-        bag->potion_l = static_cast<unsigned char>(bagObj["potion_l"].GetInt());
-        world->coin = static_cast<unsigned int>(worldObj["coin"].GetInt());
-        world->nextMap = worldObj["curMap"].GetString();
-        world->setExp(static_cast<unsigned int>(worldObj["exp"].GetInt()));
-        Value &playerObj = worldObj["player"];
-        Value &playerPositionObj = playerObj["position"];
-        world->nextPosition.x = playerPositionObj["x"].GetFloat();
-        world->nextPosition.y = playerPositionObj["y"].GetFloat();
-        Value &playerPropertyObj = playerObj["property"];
-        player.prop->agi = playerPropertyObj["agi"].GetInt();
-        player.prop->atk = playerPropertyObj["atk"].GetInt();
-        player.prop->def = playerPropertyObj["def"].GetInt();
-        player.prop->hp = playerPropertyObj["hp"].GetInt();
-        player.prop->maxHp = playerPropertyObj["maxHp"].GetInt();
+            bag->key[i] = static_cast<unsigned short>(keyAry[i].GetInt());
+        bag->potion_s = static_cast<unsigned char>(bagObj[PotionS].GetInt());
+        bag->potion_l = static_cast<unsigned char>(bagObj[PotionL].GetInt());
+        world->coin = static_cast<unsigned int>(worldObj[Coin].GetInt());
+        world->nextMap = worldObj[CurrentMap].GetString();
+        world->setExp(static_cast<unsigned int>(worldObj[Exp].GetInt()));
+        Value &playerObj = worldObj[_Player];
+        Value &playerPositionObj = playerObj[Position];
+        world->nextPosition.x = playerPositionObj["x"].GetInt();
+        world->nextPosition.y = playerPositionObj["y"].GetInt();
+        Value &playerPropertyObj = playerObj[Property];
+        player.prop->agi = playerPropertyObj[Agi].GetInt();
+        player.prop->atk = playerPropertyObj[Atk].GetInt();
+        player.prop->def = playerPropertyObj[Def].GetInt();
+        player.prop->hp = playerPropertyObj[Hp].GetInt();
+        player.prop->maxHp = playerPropertyObj[MaxHp].GetInt();
 
         clear();
-        Value &mapsObj = worldObj["maps"];
+        Value &mapsObj = worldObj[Maps];
         for (Value::ConstMemberIterator itr = mapsObj.MemberBegin();
              itr != mapsObj.MemberEnd(); ++itr) {
             const char *mapId = itr->name.GetString();
@@ -471,25 +513,25 @@ public:
                 ObjectLayerSav *layerSav = new ObjectLayerSav();
 
                 Value &layerObj = layerAry[i];
-                layerSav->id = static_cast<unsigned char>(layerObj["id"].GetInt());
-                Value &objectAry = layerObj["objects"];
+                layerSav->id = static_cast<unsigned char>(layerObj[Id].GetInt());
+                Value &objectAry = layerObj[Objects];
                 SizeType objectAryCount = objectAry.Size();
                 MapObjectSav **objectSavs = new MapObjectSav *[objectAryCount];
                 for (unsigned int j = 0; j < objectAryCount; j++) {
                     MapObjectSav *objectSav = new MapObjectSav();
 
                     Value &mapObjectObj = objectAry[j];
-                    objectSav->id = static_cast<unsigned int>(mapObjectObj["id"].GetInt());
+                    objectSav->id = static_cast<unsigned int>(mapObjectObj[Id].GetInt());
                     objectSav->x = mapObjectObj["x"].GetInt();
                     objectSav->y = mapObjectObj["y"].GetInt();
-                    objectSav->type = mapObjectObj["type"].GetString();
-                    objectSav->name = mapObjectObj["name"].GetString();
-                    objectSav->width = static_cast<unsigned int>(mapObjectObj["width"].GetInt());
-                    objectSav->height = static_cast<unsigned int>(mapObjectObj["height"].GetInt());
-                    objectSav->gid = static_cast<unsigned int>(mapObjectObj["gid"].GetInt());
+                    objectSav->type = mapObjectObj[_Type].GetString();
+                    objectSav->name = mapObjectObj[Name].GetString();
+                    objectSav->width = static_cast<unsigned int>(mapObjectObj[Width].GetInt());
+                    objectSav->height = static_cast<unsigned int>(mapObjectObj[Height].GetInt());
+                    objectSav->gid = static_cast<unsigned int>(mapObjectObj[Gid].GetInt());
 
-                    if (mapObjectObj.HasMember("properties")) {
-                        Value &propertyObj = mapObjectObj["properties"];
+                    if (mapObjectObj.HasMember(Property)) {
+                        Value &propertyObj = mapObjectObj[Property];
                         unsigned char propertyCount = static_cast<unsigned char>(propertyObj.MemberCount());
                         ObjectProperty **objectProperties = new ObjectProperty *[propertyCount];
                         unsigned char k = 0;
@@ -510,7 +552,7 @@ public:
                         objectSav->properties = objectProperties;
                     } else {
                         objectSav->propertyCount = 0;
-                        objectSav->properties = NULL;
+                        objectSav->properties = nullptr;
                     }
 
                     objectSavs[j] = objectSav;
@@ -523,11 +565,12 @@ public:
 
             mapSavs.push_back(new MapSav(mapId, layerAryCount, layerSavs));
         }
-        free(buffer);
 
-        //world->loadMap(fileIO);
-
-        //loadMap(world->curMap, world->map);
+        // visitedList
+        world->visitedList.clear();
+        Value &visitedMapAry = worldObj[VisitedMaps];
+        for (Value &m : visitedMapAry.GetArray())
+            world->visitedList.push_back(m.GetString());
 
         return true;
     }

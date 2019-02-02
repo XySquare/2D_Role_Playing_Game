@@ -1,10 +1,9 @@
 
 
-// OpenGL ES 2.0 code
-
 #include <jni.h>
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
+#include <android/looper.h>
 
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
@@ -13,6 +12,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <chrono>
+#include <zconf.h>
 
 #include "Texture.h"
 #include "Vertex.h"
@@ -25,6 +25,16 @@
 
 #define  TAG    "libgl2jni"
 
+
+static int messagePipe[2];
+
+static ALooper *mainThreadLooper;
+
+JNIEnv *UI_JNIEnv;
+
+jobject grAndroidGame;
+
+jmethodID mIdShowWebView;
 
 bool isInitialized = false;
 
@@ -45,6 +55,8 @@ long long int startTime;
 float deltaTime = 1.0f / 60.0f;
 
 int frames = 0;
+
+bool onWebViewClosed = false;
 
 auto gVertexShader =
         "attribute vec4 aVertexCoordinate;\n" // Per-vertex position information we will pass in.
@@ -70,14 +82,14 @@ auto gFragmentShader =
 
 static void printGLString(const char *name, GLenum s) {
     const char *v = (const char *) glGetString(s);
-    LOGI(TAG,"GL %s = %s\n", name, v);
+    LOGI(TAG, "GL %s = %s\n", name, v);
 }
 
 //检查当前程序错误
 static void checkGlError(const char *op) {
     for (GLint error = glGetError(); error; error
                                                     = glGetError()) {
-        LOGI(TAG,"after %s() glError (0x%x)\n", op, error);
+        LOGI(TAG, "after %s() glError (0x%x)\n", op, error);
     }
 }
 
@@ -102,7 +114,7 @@ GLuint loadShader(GLenum shaderType, const char *pSource) {
                 char *buf = (char *) malloc(infoLen);
                 if (buf) {
                     glGetShaderInfoLog(shader, infoLen, NULL, buf);
-                    LOGE(TAG,"Could not compile shader %d:\n%s\n",
+                    LOGE(TAG, "Could not compile shader %d:\n%s\n",
                          shaderType, buf);
                     free(buf);
                 }
@@ -157,7 +169,7 @@ GLuint createProgram(const char *pVertexSource, const char *pFragmentSource) {
                 if (buf) {
                     //从日志缓存中取出关于program length个长度的日志，并保存在buf中
                     glGetProgramInfoLog(program, bufLength, NULL, buf);
-                    LOGE(TAG,"Could not link program:\n%s\n", buf);
+                    LOGE(TAG, "Could not link program:\n%s\n", buf);
                     free(buf);
                 }
             }
@@ -181,10 +193,87 @@ long long int nanoTime() {
  * Calculate orthographic projection matrix
  * See: https://www.scratchapixel.com/lessons/3d-basic-rendering/perspective-and-orthographic-projection-matrix/orthographic-projection-matrix
  */
-GLfloat *ortho(float left, float right, float bottom, float top, float zNear, float zFar){
+GLfloat *ortho(float left, float right, float bottom, float top, float zNear, float zFar) {
 
-    return new GLfloat[16]{2/(right-left),0,0,0,0,2/(top-bottom),0,0,0,0,-2/(zFar-zNear),0,-(right+left)/(right-left),-(top+bottom)/(top-bottom),-(zFar+zNear)/(zFar-zNear),1};
+    return new GLfloat[16]{2 / (right - left), 0, 0, 0, 0, 2 / (top - bottom), 0, 0, 0, 0,
+                           -2 / (zFar - zNear), 0, -(right + left) / (right - left),
+                           -(top + bottom) / (top - bottom), -(zFar + zNear) / (zFar - zNear), 1};
 };
+
+// this will be called on main thread
+static int looperCallback(int fd, int events, void *data) {
+
+    const char* msg;
+    // read message from pipe
+    read(fd, &msg, sizeof(void*));
+
+    const char *scheme = "file:///";
+    //check if msg starts with scheme
+    if(strncmp(msg, scheme, strlen(scheme)) == 0){
+        jstring jstr = UI_JNIEnv->NewStringUTF(msg);
+        UI_JNIEnv->CallVoidMethod(grAndroidGame, mIdShowWebView, jstr);
+    }
+
+    // continue listening for events
+    return 1;
+}
+
+/**
+ * Setup the interface between Java and C.
+ * Get a handler of the showWebView method to show the WebView,
+ * to achieve this, JNIEnv (for UI) and a global reference of AndroidGame are also needed;
+ * Setup fileIO;
+ * Setup the looper for main (UI) thread.
+ * Should be called Once on MainThread
+ */
+void onSetUp(JNIEnv *env, jobject instance, jstring externalFilesDir_, jobject assetManager) {
+
+    // Cache JNIEnv for main (UI) thread
+    UI_JNIEnv = env;
+    // Get a global reference of the instance of AndroidGame
+    grAndroidGame = env->NewGlobalRef(instance);
+    // Get a handler of the class of AndroidGame
+    //jclass jniHandle = env->FindClass("xyy/game/rpg2d/framework/impl/AndroidGame");
+    jclass jniHandle = env->GetObjectClass(instance);
+    if (NULL == jniHandle) {
+        LOGE(TAG, "Can't find class");
+        return;
+    }
+    // Get a handler of the showWebView method of AndroidGame
+    mIdShowWebView = env->GetMethodID(jniHandle, "showWebView", "(Ljava/lang/String;)V");
+    env->DeleteLocalRef(jniHandle);
+    if (NULL == mIdShowWebView) {
+        LOGE(TAG, "Can't find method");
+        return;
+    }
+
+    const char *externalFilesDir = env->GetStringUTFChars(externalFilesDir_, 0);
+
+    // Get the global reference of AssetManager, to ensure it is valid after the method returns
+    jobject grAssetManager = env->NewGlobalRef(assetManager);
+
+    // Note: The global reference will be valid until DeleteGlobalRef is called.
+    // Here, AssetManager shall be valid during the lifetime of the application,
+    // so no DeleteGlobalRef will be called currently
+
+    // Get the native AAssetManager
+    AAssetManager *aAssetManager = AAssetManager_fromJava(env, grAssetManager);
+
+    gFileIO = new FileIO(externalFilesDir, aAssetManager);
+
+    env->ReleaseStringUTFChars(externalFilesDir_, externalFilesDir);
+
+    // get looper for this thread
+    mainThreadLooper = ALooper_forThread();
+    // add reference to keep object alive
+    ALooper_acquire(mainThreadLooper);
+    // create send-receive pipe
+    pipe(messagePipe);
+    // listen for pipe read end, if there is something to read
+    // - notify via provided callback on main thread
+    ALooper_addFd(mainThreadLooper, messagePipe[0],
+                  0, ALOOPER_EVENT_INPUT, looperCallback, nullptr);
+}
 
 /**
  * This function will be called only once
@@ -197,13 +286,13 @@ void onInitialize(JNIEnv *env) {
 
     gMultiTouchHandler = new MultiTouchHandler();
 
-    currentScreen = new GameScreen(Game(gSpriteBatcher, gFileIO, gMultiTouchHandler));
+    currentScreen = new GameScreen(Game(gSpriteBatcher, gFileIO, gMultiTouchHandler), messagePipe[1]);
 
     // Projection matrix
     //mMVPMatrix = glm::ortho(0.f, 1280.f, 720.f, 0.f, -1.f, 1.f);
     gMVPMatrix = ortho(0.f, 1280.f, 720.f, 0.f, -1.f, 1.f);
 
-    LOGI(TAG,"Initialized.");
+    LOGI(TAG, "Initialized.");
 }
 
 void onSurfaceCreated(JNIEnv *env) {
@@ -241,7 +330,7 @@ void onSurfaceCreated(JNIEnv *env) {
 
     gProgram = createProgram(gVertexShader, gFragmentShader);
     if (!gProgram) {
-        LOGE(TAG,"Could not create program.");
+        LOGE(TAG, "Could not create program.");
         return;
     }
     GLint gvMatrixHandle = glGetUniformLocation(gProgram, "uMVPMatrix");
@@ -278,7 +367,7 @@ void onSurfaceChanged(int w, int h) {
     glViewport(0, 0, w, h);
     checkGlError("glViewport");
 
-    LOGI(TAG,"setupGraphics(%d, %d)", w, h);
+    LOGI(TAG, "setupGraphics(%d, %d)", w, h);
 
     startTime = nanoTime();
 }
@@ -288,7 +377,7 @@ void onDrawFrame() {
     long long int curTime = nanoTime();
 
     if (curTime - startTime >= 1000000000) {
-        LOGD(TAG,"Fps: %d", frames);
+        LOGD(TAG, "Fps: %d", frames);
         if (frames >= 59 || frames <= 0)
             frames = 60;
         deltaTime = 1.0f / frames;
@@ -300,70 +389,54 @@ void onDrawFrame() {
     glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
     //checkGlError("glClear");
 
+    if(onWebViewClosed){
+        currentScreen->onReceive(RESUME, nullptr);
+        onWebViewClosed = false;
+    }
+
     currentScreen->update(deltaTime);
     currentScreen->present();
 }
 
 extern "C" {
 JNIEXPORT void JNICALL
-Java_xyy_game_rpg2d_framework_GL2JNILib_setupFileIO(JNIEnv *env, jclass type,
-                                                    jstring externalFilesDir_,
-                                                    jobject assetManager);
+Java_xyy_game_rpg2d_framework_impl_AndroidGame_setup(JNIEnv *env, jobject instance,
+                                                     jstring externalFilesDir_, jobject assetManager);
 JNIEXPORT void JNICALL
-Java_xyy_game_rpg2d_framework_GL2JNILib_onSurfaceCreated(JNIEnv *env, jclass type);
+Java_xyy_game_rpg2d_framework_JNILib_onSurfaceCreated(JNIEnv *env, jclass type);
 JNIEXPORT void JNICALL
-Java_xyy_game_rpg2d_framework_GL2JNILib_onSurfaceChanged(JNIEnv *env, jclass type, jint width,
+Java_xyy_game_rpg2d_framework_JNILib_onSurfaceChanged(JNIEnv *env, jclass type, jint width,
                                                          jint height);
 JNIEXPORT void JNICALL
-Java_xyy_game_rpg2d_framework_GL2JNILib_onDrawFrame(JNIEnv *env, jclass type);
+Java_xyy_game_rpg2d_framework_JNILib_onDrawFrame(JNIEnv *env, jclass type);
 JNIEXPORT void JNICALL
-Java_xyy_game_rpg2d_framework_GL2JNILib_onTouch(JNIEnv *env, jclass type, jint pointer,
+Java_xyy_game_rpg2d_framework_JNILib_onTouch(JNIEnv *env, jclass type, jint pointer,
                                                 jshort action, jint x, jint y);
+JNIEXPORT void JNICALL
+Java_xyy_game_rpg2d_framework_JNILib_onWebViewClosed(JNIEnv *env, jclass type);
 };
 
 JNIEXPORT void JNICALL
-Java_xyy_game_rpg2d_framework_GL2JNILib_setupFileIO(JNIEnv *env, jclass type,
-                                                    jstring externalFilesDir_,
-                                                    jobject assetManager) {
-
-    const char *externalFilesDir = env->GetStringUTFChars(externalFilesDir_, 0);
-
-    // Get the global reference of AssetManager, to ensure it is valid after the method returns
-    jobject grAssetManager = env->NewGlobalRef(assetManager);
-
-    // Note: The global reference will be valid until DeleteGlobalRef is called.
-    // Here, AssetManager shall be valid during the lifetime of the application,
-    // so no DeleteGlobalRef will be called currently
-
-    // Get the native AAssetManager
-    AAssetManager *aAssetManager = AAssetManager_fromJava(env, grAssetManager);
-
-    gFileIO = new FileIO(externalFilesDir, aAssetManager);
-
-    env->ReleaseStringUTFChars(externalFilesDir_, externalFilesDir);
-}
-
-JNIEXPORT void JNICALL
-Java_xyy_game_rpg2d_framework_GL2JNILib_onSurfaceCreated(JNIEnv *env, jclass type) {
+Java_xyy_game_rpg2d_framework_JNILib_onSurfaceCreated(JNIEnv *env, jclass type) {
 
     onSurfaceCreated(env);
 }
 
 JNIEXPORT void JNICALL
-Java_xyy_game_rpg2d_framework_GL2JNILib_onSurfaceChanged(JNIEnv *env, jclass type, jint width,
+Java_xyy_game_rpg2d_framework_JNILib_onSurfaceChanged(JNIEnv *env, jclass type, jint width,
                                                          jint height) {
 
     onSurfaceChanged(width, height);
 }
 
 JNIEXPORT void JNICALL
-Java_xyy_game_rpg2d_framework_GL2JNILib_onDrawFrame(JNIEnv *env, jclass type) {
+Java_xyy_game_rpg2d_framework_JNILib_onDrawFrame(JNIEnv *env, jclass type) {
 
     onDrawFrame();
 }
 
 JNIEXPORT void JNICALL
-Java_xyy_game_rpg2d_framework_GL2JNILib_onTouch(JNIEnv *env, jclass type, jint pointer,
+Java_xyy_game_rpg2d_framework_JNILib_onTouch(JNIEnv *env, jclass type, jint pointer,
                                                 jshort action, jint x, jint y) {
     Touch event;
     event.pointer = (unsigned char) pointer;
@@ -373,3 +446,15 @@ Java_xyy_game_rpg2d_framework_GL2JNILib_onTouch(JNIEnv *env, jclass type, jint p
     gMultiTouchHandler->onTouch(event);
 }
 
+JNIEXPORT void JNICALL
+Java_xyy_game_rpg2d_framework_impl_AndroidGame_setup(JNIEnv *env, jobject instance,
+                                                     jstring externalFilesDir_, jobject assetManager) {
+
+    onSetUp(env, instance, externalFilesDir_, assetManager);
+}
+
+JNIEXPORT void JNICALL
+Java_xyy_game_rpg2d_framework_JNILib_onWebViewClosed(JNIEnv *env, jclass type) {
+
+    onWebViewClosed = true;
+}

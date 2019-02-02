@@ -73,7 +73,7 @@
                         {
                          "name":"atk",
                          "type":"int",
-                         "value":5
+                         "value":10000
                         }, 
                         {
                          "name":"coin",

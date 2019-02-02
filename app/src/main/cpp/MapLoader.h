@@ -83,7 +83,7 @@ public:
 
     Map *loadMap(FileIO *fileIO, const char *fileName) {
         using namespace rapidjson;
-        LOGI("MapLoader","World Loading...%s.", fileName);
+        LOGI("MapLoader","Load Map %s ...", fileName);
 
         const char *mapData = read(fileIO, fileName);
 
@@ -333,7 +333,7 @@ public:
     TileSet *loadTileSet(FileIO *fileIO, const char *fileName) {
         using namespace rapidjson;
 
-        LOGI("MapLoader","TileSet Loading...%s.", fileName);
+        LOGI("MapLoader","Load TileSet %s ...", fileName);
 
         const char *tileSetData = read(fileIO, fileName);
 

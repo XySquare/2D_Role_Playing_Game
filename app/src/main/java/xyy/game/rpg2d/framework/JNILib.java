@@ -3,16 +3,12 @@ package xyy.game.rpg2d.framework;
 
 // Wrapper for native library
 
-import android.content.res.AssetManager;
+public class JNILib {
 
-public class GL2JNILib {
-
-    // Used to load the native library on application startup.
-    static {
+    // Need to be stated at where any native functions are firstly called
+    /*static {
         System.loadLibrary("gl2jni");
-    }
-
-    public static native void setupFileIO(String externalFilesDir, AssetManager assets);
+    }*/
 
     public static native void onSurfaceCreated();
 
@@ -25,4 +21,6 @@ public class GL2JNILib {
     public static native void onDrawFrame();
 
     public static native void onTouch(int pointer, short action, int x, int y);
+
+    public static native void onWebViewClosed();
 }

@@ -9,6 +9,7 @@
 #include "MultiTouchHandler.h"
 #include "SpriteBatcher.h"
 #include "Assets.h"
+#include "FontHelper.h"
 
 class ListEventListener {
 
@@ -63,32 +64,6 @@ private:
     int preListY;
 
     ListEventListener *const eventListener;
-
-    const float charWidth = 282 / 16.f;
-
-    void drawChar(SpriteBatcher *spriteBatcher, float x, float y, char c) {
-
-        const unsigned short textSpriteY = 256;
-        if (c > ' ' && c < 127) {
-            c -= ' ';
-            unsigned char row = static_cast<unsigned char>(c / 16);
-            unsigned char col = static_cast<unsigned char>(c % 16);
-            spriteBatcher->drawSprite(x, y, charWidth, 32, TextureRegion(col * charWidth / 512.f,
-                                                                         (textSpriteY + row * 32) /
-                                                                         512.f, charWidth / 512.f,
-                                                                         32 / 512.f));
-        }
-    }
-
-    void drawText(SpriteBatcher *spriteBatcher, float x, float y, const char *text) {
-
-        unsigned char i = 0;
-        char c;
-        while ((c = text[i]) != '\0') {
-            drawChar(spriteBatcher, x + i * charWidth, y, c);
-            i++;
-        }
-    }
 
 public:
 
@@ -242,15 +217,15 @@ public:
                 if (index == pressedItemIndex)
                     spriteBatcher->drawSprite(listX, firstDisplayItemY + i * itemHeight, listWidth,
                                               displayHeight,
-                                              TextureRegion((384 + 64) / 512.f, 128 / 512.f,
-                                                            64 / 512.f,
-                                                            64 / 512.f));
+                                              TextureRegion((384 + 64), 128,
+                                                            64,
+                                                            64));
                 else
                     spriteBatcher->drawSprite(listX, firstDisplayItemY + i * itemHeight, listWidth,
                                               displayHeight,
-                                              TextureRegion(384 / 512.f, 128 / 512.f, 64 / 512.f,
-                                                            64 / 512.f));
-                drawText(spriteBatcher, TXT_X, firstDisplayItemY + i * itemHeight + 28,
+                                              TextureRegion(384, 128, 64,
+                                                            64));
+                FontHelper::drawText(spriteBatcher, TXT_X, firstDisplayItemY + i * itemHeight + 28,
                          list[firstDisplayItemIndex + i].c_str());
             }
         }

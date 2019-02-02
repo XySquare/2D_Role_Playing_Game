@@ -10,13 +10,10 @@
 
 #include "Screen.h"
 #include "World.h"
-#include "SaveDataHelper.h"
 
 class GameStateTransfer final : public Screen {
 
 private:
-
-    World *world;
 
     EventListener *eventListener;
 
@@ -27,8 +24,8 @@ private:
 
 public:
 
-    GameStateTransfer(Game game, World *world, EventListener *eventListener) :
-            Screen(game), world(world), eventListener(eventListener),_state(1) {}
+    GameStateTransfer(Game game, EventListener *eventListener) :
+            Screen(game), eventListener(eventListener),_state(1) {}
 
     virtual void resume() override {
 
@@ -42,8 +39,7 @@ public:
             timer += deltaTime;
             if(timer >= 0.5f){
                 timer = 0.5f;
-                SaveDataHelper::saveMap(world->curMap, world->map);
-                eventListener->onReceive(LOAD_MAP, NULL);
+                eventListener->onReceive(LOAD_MAP, nullptr);
                 _state = 2;
             }
         }
@@ -51,7 +47,7 @@ public:
             timer -= deltaTime;
             if(timer <= 0){
                 timer = 0;
-                eventListener->onReceive(Event::RUNNING, NULL);
+                eventListener->onReceive(Event::RUNNING, nullptr);
             }
         }
     }

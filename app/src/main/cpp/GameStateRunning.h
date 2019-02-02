@@ -175,8 +175,7 @@ public:
                             world->bag->key[door - 1]--;
                             world->removeMonster();
                             door = 0;
-                        }
-                        else {
+                        } else {
                             eventListener->onReceive(NOTIFICATION, "No Keys");
                         }
                     }
@@ -192,23 +191,19 @@ public:
         spriteBatcher->beginBatch(Assets::ui);
 
         // Menu
-        spriteBatcher->drawSprite(1216, 0, 64, 64,
-                                  TextureRegion(448 / 512.f, 0, 64 / 512.f, 64 / 512.f));
+        spriteBatcher->drawSprite(1216, 0, 64, 64, TextureRegion(448, 0, 64, 64));
 
         // Controller
-        spriteBatcher->drawSprite(64, 464, 192, 192,
-                                  TextureRegion(0, 0, 192 / 512.f, 192 / 512.f));
+        spriteBatcher->drawSprite(64, 464, 192, 192, TextureRegion(0, 0, 192, 192));
         spriteBatcher->drawSprite(controllerX - 80, controllerY - 80, 160, 160,
-                                  TextureRegion(192 / 512.f, 0, 160 / 512.f, 160 / 512.f));
+                                  TextureRegion(192, 0, 160, 160));
 
         // Bottom-right button
         if (door) {
-            spriteBatcher->drawSprite(1056, 496, 160, 160,
-                                      TextureRegion(192 / 512.f, 0, 160 / 512.f, 160 / 512.f));
+            spriteBatcher->drawSprite(1056, 496, 160, 160, TextureRegion(192, 0, 160, 160));
 
-            spriteBatcher->drawSprite(1072, 512, 128, 128,
-                                      TextureRegion(64*door / 512.f, 448 / 512.f, 64 / 512.f, 64 / 512.f));
-            FontHelper::drawNumber(spriteBatcher, 1168, 608, world->bag->key[door-1]);
+            spriteBatcher->drawSprite(1072, 512, 128, 128, TextureRegion(64 * door, 448, 64, 64));
+            FontHelper::drawNumber(spriteBatcher, 1168, 608, world->bag->key[door - 1]);
         }
 
         spriteBatcher->endBatch();

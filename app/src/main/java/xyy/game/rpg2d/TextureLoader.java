@@ -14,7 +14,7 @@ import xyy.game.rpg2d.framework.impl.AndroidGame;
 /**
  * Created by ${XYY} on ${2018/11/20}.
  */
-public class AssetsLoader {
+public class TextureLoader {
 
     public static int load(String fileName) {
 
@@ -46,7 +46,6 @@ public class AssetsLoader {
             GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_REPEAT);
             //根据以上指定的参数，生成一个2D纹理
             GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
-            Log.w("AssetsLoader","Texture loaded: "+fileName);
             return texture[0];
         } catch (IOException e) {
             throw new RuntimeException("Couldn't load bitmap from asset '"

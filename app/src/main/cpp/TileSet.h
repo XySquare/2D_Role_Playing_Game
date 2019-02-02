@@ -23,15 +23,15 @@ public:
 
     const unsigned int tileWidth;
 
-    const unsigned int imageHeight;
+    const unsigned short imageHeight;
 
-    const unsigned int imageWidth;
+    const unsigned short imageWidth;
 
     Tile **const tiles;
 
     TileSet(const char* image, const unsigned int tileCount, const unsigned int columns,
             const unsigned int tileHeight, const unsigned int tileWidth,
-            const unsigned int imageHeight, const unsigned int imageWidth,
+            const unsigned short imageHeight, const unsigned short imageWidth,
             Tile **const tiles) :
             image(image),
             tileCount(tileCount), columns(columns),

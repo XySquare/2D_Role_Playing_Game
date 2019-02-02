@@ -23,59 +23,83 @@ public:
 
     static Texture *player;
 
-    static int tileSetCount;
+    static unsigned char tileSetCount;
 
     static Texture **tileSetTextures;
 
-    static void setup(JNIEnv *env){
+    static void setup(JNIEnv *env) {
 
         jniEnv = env;
         unitTexture = new UnitTexture();
-        ui = new Texture(env, "ui.png");
-        player = new Texture(env, "player.png");
+        ui = new Texture("ui.png", 512, 1024);
+        player = new Texture("player.png", 512, 512);
         reload();
     }
 
-    static void reload(){
+    static void reload() {
 
         unitTexture->load();
-        ui->load();
-        player->load();
-        for(int i=0;i<tileSetCount;i++){
-            tileSetTextures[i]->load();
+        ui->load(jniEnv);
+        player->load(jniEnv);
+        for (unsigned char i = 0; i < tileSetCount; i++) {
+            tileSetTextures[i]->load(jniEnv);
         }
-        LOGI("Assets","Assets Loaded.");
+        LOGI("Assets", "(Re)Loaded.");
     }
 
-    static void load(Map *map){
+    static void load(Map *map) {
 
-        if(tileSetTextures){
-            for(int i=0;i<tileSetCount;i++){
-                delete tileSetTextures[i];
+        unsigned char c = map->tileSetCount;
+        Texture **s = new Texture *[c];
+        // If corresponding textures have already been loaded, reuse it.
+        for (unsigned char i = 0; i < c; i++) {
+            Texture *t = findTexture(map->tileSets[i]->image);
+            if (t) {
+                s[i] = t;
+            } else {
+                s[i] = new Texture( map->tileSets[i]->image, map->tileSets[i]->imageWidth,
+                                   map->tileSets[i]->imageHeight);
+                s[i]->load(jniEnv);
+            }
+        }
+
+        if (tileSetTextures) {
+            for (unsigned char i = 0; i < tileSetCount; i++) {
+                if (tileSetTextures[i] != nullptr)
+                    delete tileSetTextures[i];
             }
             delete[] tileSetTextures;
         }
+        tileSetCount = c;
+        tileSetTextures = s;
 
-        tileSetCount = map->tileSetCount;
-        tileSetTextures = new Texture*[tileSetCount];
-        for(int i=0;i<tileSetCount;i++){
-            tileSetTextures[i] = new Texture(jniEnv, map->tileSets[i]->image);
-            tileSetTextures[i]->load();
+        LOGI("Assets", "Map Assets Loaded.");
+    }
+
+private:
+
+    static Texture *findTexture(std::string name) {
+        for (unsigned char i = 0; i < tileSetCount; i++) {
+            if (tileSetTextures[i] && tileSetTextures[i]->fileName == name) {
+                Texture *t = tileSetTextures[i];
+                tileSetTextures[i] = nullptr;
+                return t;
+            }
         }
-        LOGI("Assets","Map Assets Loaded.");
+        return nullptr;
     }
 };
 
-JNIEnv *Assets::jniEnv = NULL;
+JNIEnv *Assets::jniEnv = nullptr;
 
-UnitTexture *Assets::unitTexture = NULL;
+UnitTexture *Assets::unitTexture = nullptr;
 
-Texture *Assets::ui = NULL;
+Texture *Assets::ui = nullptr;
 
-Texture *Assets::player = NULL;
+Texture *Assets::player = nullptr;
 
-int Assets::tileSetCount = 0;
+unsigned char Assets::tileSetCount = 0;
 
-Texture ** Assets::tileSetTextures = NULL;
+Texture **Assets::tileSetTextures = nullptr;
 
 #endif //RPG2D_ASSETS_H

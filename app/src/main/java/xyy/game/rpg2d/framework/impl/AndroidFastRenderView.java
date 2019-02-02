@@ -10,7 +10,7 @@ import javax.microedition.khronos.egl.EGLContext;
 import javax.microedition.khronos.egl.EGLDisplay;
 import javax.microedition.khronos.opengles.GL10;
 
-import xyy.game.rpg2d.framework.GL2JNILib;
+import xyy.game.rpg2d.framework.JNILib;
 
 /**
  * Created by ${XYY} on ${2018/12/15}.
@@ -150,16 +150,16 @@ public final class AndroidFastRenderView extends GLSurfaceView {
 
         public void onSurfaceCreated(GL10 gl, EGLConfig config) {
             Log.w("Renderer","onSurfaceCreated");
-            GL2JNILib.onSurfaceCreated();
+            JNILib.onSurfaceCreated();
         }
 
         public void onSurfaceChanged(GL10 gl, int width, int height) {
             Log.w("Renderer","onSurfaceChanged");
-            GL2JNILib.onSurfaceChanged(width, height);
+            JNILib.onSurfaceChanged(width, height);
         }
 
         public void onDrawFrame(GL10 gl) {
-            GL2JNILib.onDrawFrame();
+            JNILib.onDrawFrame();
         }
     }
 

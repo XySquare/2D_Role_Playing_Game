@@ -80,14 +80,10 @@ public:
                                                       y * world->map->tileHeight + offsetY,
                                                       world->map->tileWidth, world->map->tileHeight,
                                                       TextureRegion(
-                                                              (float) (x1 * tileSet->tileWidth) /
-                                                              tileSet->imageWidth,
-                                                              (float) (y2 * tileSet->tileHeight) /
-                                                              tileSet->imageHeight,
-                                                              (float) tileSet->tileWidth /
-                                                              tileSet->imageWidth,
-                                                              (float) tileSet->tileHeight /
-                                                              tileSet->imageHeight));
+                                                              (float) (x1 * tileSet->tileWidth),
+                                                              (float) (y2 * tileSet->tileHeight),
+                                                              tileSet->tileWidth,
+                                                              tileSet->tileHeight));
                         }
                     }
                 }
@@ -104,14 +100,10 @@ public:
                         spriteBatcher->drawSprite(object->position.x + offsetX,
                                                   object->position.y + offsetY, object->width,
                                                   object->height,
-                                                  TextureRegion((float) (x1 * tileSet->tileWidth) /
-                                                                tileSet->imageWidth,
-                                                                (float) (y2 * tileSet->tileHeight) /
-                                                                tileSet->imageHeight,
-                                                                (float) tileSet->tileWidth /
-                                                                tileSet->imageWidth,
-                                                                (float) tileSet->tileHeight /
-                                                                tileSet->imageHeight));
+                                                  TextureRegion((float) (x1 * tileSet->tileWidth),
+                                                                (float) (y2 * tileSet->tileHeight),
+                                                                tileSet->tileWidth,
+                                                                tileSet->tileHeight));
                     }
                 }
             }
@@ -133,9 +125,9 @@ public:
 
         //Draw Player
         int frame = ((int) (world->player.stateTime / 0.125f)) % 4;
-        float x = frame * 90 / 512.f;
-        float y = (world->player.state) * 120 / 512.f;
-        TextureRegion playerRegine(x, y, 90 / 512.f, 120 / 512.f);
+        float x = frame * 90;
+        float y = (world->player.state) * 120;
+        TextureRegion playerRegine(x, y, 90, 120);
         spriteBatcher->drawSprite(
                 world->player.position.x + offsetX - (90 - Player::PLAYER_WIDTH) / 2,
                 world->player.position.y + offsetY - (120 - Player::PLAYER_HEIGHT), 90, 120,

@@ -19,10 +19,18 @@
 #include "GameStateMonsterInfo.h"
 #include "GameStateTitle.h"
 #include "Notification.h"
+#include "GameStateDialog.h"
+#include "GameStatePending.h"
 
-class GameScreen final : public Screen {
+
+class GameScreen final : public Screen, public DialogListener {
 
 private:
+
+    static const unsigned char DIALOG_ESCAPE = 1;
+
+    // A file descriptor to be polled by the looper.
+    int messageQueue;
 
     World *world;
 
@@ -30,11 +38,13 @@ private:
 
     Notification *notification;
 
+    Screen *pendingState;
+
     Screen *gameState;
 
 public:
 
-    GameScreen(Game game) : Screen(game) {
+    GameScreen(Game game, int fd) : Screen(game), messageQueue(fd) {
 
         world = new World(game.fileIO, this);
 
@@ -75,10 +85,11 @@ public:
             gameState = new GameStateRunning(game, world, this);
         } else if (what == TRANSFER) {
             delete gameState;
-            gameState = new GameStateTransfer(game, world, this);
+            gameState = new GameStateTransfer(game, this);
         } else if (what == BATTLE) {
             delete gameState;
-            gameState = new GameStateBattle(game, world, this, *((int *) arg));
+            gameState = new GameStateBattle(game, world, this,
+                                            static_cast<unsigned int>(*((int *) arg)));
         } else if (what == SHOP) {
             delete gameState;
             gameState = new GameStateShop(game, world, this);
@@ -105,19 +116,46 @@ public:
             else if (itemId == 5) {
                 world->bag->potion_l++;
             }
+        } else if (what == SAVE_MAP) {
+            SaveDataHelper::saveMap(world->curMap, world->map);
         } else if (what == LOAD_MAP) {
             world->loadMap(game.fileIO);
             SaveDataHelper::loadMap(world->curMap, world->map);
             worldRenderer->resume();
+            world->player.state = Player::PLAYER_STATE_DOWN;
         } else if (what == ESCAPE) {
-            delete world;
-            world = new World(game.fileIO, this);
-            SaveDataHelper::clear();
-            worldRenderer->resume();
+            delete gameState;
+            gameState = new GameStateDialog(game, DIALOG_ESCAPE,
+                                            "Your current progress will lose. Do you want to escape ?",
+                                            "Confirm", "Cancel", this);
         } else if (what == NOTIFICATION) {
             notification->newNotice((const char *) arg);
+        } else if (what == WEBVIEW) {
+            pendingState = gameState;
+            gameState = new GameStatePending(game);
+            // send messages from render to UI thread
+            write(messageQueue, &arg, sizeof(arg));
+        } else if (what == RESUME) {
+            if(pendingState != nullptr){
+                delete gameState;
+                gameState = pendingState;
+                pendingState = nullptr;
+            }
         } else {
             gameState->onReceive(what, arg);
+        }
+    }
+
+    void onDialogResult(unsigned char dialogId, Result res) override {
+
+        if (dialogId == DIALOG_ESCAPE) {
+            // Escape
+            if (res == APPROVE) {
+                world->reset();
+                SaveDataHelper::clear();
+                onReceive(TRANSFER, nullptr);
+            } else
+                onReceive(RUNNING, nullptr);
         }
     }
 

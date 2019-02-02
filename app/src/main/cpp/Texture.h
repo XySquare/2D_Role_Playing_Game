@@ -9,26 +9,31 @@
 #include <jni.h>
 #include <GLES2/gl2.h>
 #include <string>
+#include "Log.h"
 
 class Texture {
 
 private:
 
-    JNIEnv *const env;
     GLuint textureId;
 
 public:
 
     const std::string fileName;
+    const unsigned short width;
+    const unsigned short height;
 
-    Texture(JNIEnv *const env, std::string fileName) : env(env), fileName(fileName) {}
+    Texture(const std::string &fileName, const unsigned short width,
+            const unsigned short height) : fileName(fileName), width(width),
+                                           height(height) {}
 
-    void load() {
+    void load(JNIEnv *const env) {
 
-        jclass cls = env->FindClass("xyy/game/rpg2d/AssetsLoader");
+        jclass cls = env->FindClass("xyy/game/rpg2d/TextureLoader");
         jmethodID mId = env->GetStaticMethodID(cls,"load","(Ljava/lang/String;)I"); // Don't forget ';'
         jstring jstr = env->NewStringUTF(fileName.c_str());
         textureId = (GLuint)(env->CallStaticIntMethod(cls,mId,jstr));
+        LOGW("Texture","Load %s", fileName.c_str());
     }
 
     void bind() {
@@ -40,6 +45,7 @@ public:
 
         glBindTexture(GL_TEXTURE_2D, textureId);
         glDeleteTextures(1, &textureId);
+        LOGW("Texture","Delete %s", fileName.c_str());
     }
 
     ~Texture() {

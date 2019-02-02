@@ -15,6 +15,14 @@ public:
     unsigned char potion_s = 0;
 
     unsigned char potion_l = 0;
+
+    void reset(){
+
+        for(unsigned char i=0;i<3;i++)
+            key[i] = 0;
+        potion_s = 0;
+        potion_l = 0;
+    }
 };
 
 

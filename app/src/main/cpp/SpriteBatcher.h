@@ -18,12 +18,15 @@ private:
     Vertex *vertices;
     GLfloat *verticesBuffer;
     GLuint *indices;
+    const unsigned int maxSprites;
     int bufferIndex;
     int numSprites;
+    unsigned short textureWidth;
+    unsigned short textureHeight;
 
 public:
 
-    SpriteBatcher(unsigned int maxSprites):bufferIndex(0),numSprites(0) {
+    SpriteBatcher(unsigned int maxSprites):maxSprites(maxSprites),bufferIndex(0),numSprites(0) {
 
         verticesBuffer = new GLfloat[4 * 4 * maxSprites];
         vertices = new Vertex(true);
@@ -46,6 +49,8 @@ public:
 
         glVertexAttrib4f(GRAPHIC_COLOR_HANDEL, 1.f, 1.f, 1.f, 1.f);
         texture->bind();
+        textureWidth = texture->width;
+        textureHeight = texture->height;
         numSprites = 0;
         bufferIndex = 0;
     }
@@ -67,6 +72,11 @@ public:
 
     void drawSprite(float x, float y, float width, float height, TextureRegion region) {
 
+        if(numSprites >= maxSprites){
+            LOGE("SpriteBatcher","Too Many Sprites.");
+            return;
+        }
+
         float x1 = x;
         float y1 = y;
         float x2 = x + width;
@@ -74,23 +84,23 @@ public:
 
         verticesBuffer[bufferIndex++] = x1;
         verticesBuffer[bufferIndex++] = y1;
-        verticesBuffer[bufferIndex++] = region.u1;
-        verticesBuffer[bufferIndex++] = region.v1;
+        verticesBuffer[bufferIndex++] = region.u1/textureWidth;
+        verticesBuffer[bufferIndex++] = region.v1/textureHeight;
 
         verticesBuffer[bufferIndex++] = x2;
         verticesBuffer[bufferIndex++] = y1;
-        verticesBuffer[bufferIndex++] = region.u2;
-        verticesBuffer[bufferIndex++] = region.v1;
+        verticesBuffer[bufferIndex++] = region.u2/textureWidth;
+        verticesBuffer[bufferIndex++] = region.v1/textureHeight;
 
         verticesBuffer[bufferIndex++] = x2;
         verticesBuffer[bufferIndex++] = y2;
-        verticesBuffer[bufferIndex++] = region.u2;
-        verticesBuffer[bufferIndex++] = region.v2;
+        verticesBuffer[bufferIndex++] = region.u2/textureWidth;
+        verticesBuffer[bufferIndex++] = region.v2/textureHeight;
 
         verticesBuffer[bufferIndex++] = x1;
         verticesBuffer[bufferIndex++] = y2;
-        verticesBuffer[bufferIndex++] = region.u1;
-        verticesBuffer[bufferIndex++] = region.v2;
+        verticesBuffer[bufferIndex++] = region.u1/textureWidth;
+        verticesBuffer[bufferIndex++] = region.v2/textureHeight;
 
         numSprites++;
     }

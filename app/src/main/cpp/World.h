@@ -27,7 +27,7 @@ private:
 
     EventListener *eventListener;
 
-    MapObject *monster = NULL;
+    MapObject *monster = nullptr;
 
     unsigned int exp = 100;
 
@@ -45,7 +45,7 @@ public:
 
     Vector2 nextPosition;
 
-    Map *map = NULL;
+    Map *map = nullptr;
 
     float timer = 0;
 
@@ -67,7 +67,7 @@ public:
         visitedList.push_back(mapName);
     }
 
-    World(FileIO *fileIO, EventListener *eventListener) : eventListener(eventListener), player(0, 0), nextPosition(0,0), bag(new Bag()) {
+    World(FileIO *fileIO, EventListener *eventListener) : eventListener(eventListener), player(), nextPosition(0,0), bag(new Bag()) {
 
         state = LOADING;
         nextMap = "m0.json";
@@ -76,6 +76,19 @@ public:
         loadMap(fileIO);
         db = new Db(fileIO, "data.json");
         LOGI("World","World Created.");
+    }
+
+    void reset(){
+
+        player.reset();
+        bag->reset();
+        state = LOADING;
+        nextMap = "m0.json";
+        nextPosition.x = 1056;
+        nextPosition.y = 1440;
+        visitedList.clear();
+        coin = 0;
+        exp = 100;
     }
 
     void setPlayerVelocity(Vector2 v) {
@@ -145,7 +158,7 @@ public:
         const unsigned char *layer = map->collisionLayer;
         int width = map->width;
 
-        if (layer != NULL) {
+        if (layer != nullptr) {
             int minIndexY = (int) (curRecttop / tileWidth);
             int maxIndexY = (int) (curRectbottom / tileWidth);
             int minIndexX = (int) (curRectleft / tileWidth);
@@ -267,8 +280,8 @@ public:
 
             if (!(left < right2 && right > left2 && top < bottom2 && bottom > top2)) {
 
-                monster = NULL;
-                eventListener->onReceive(Event::DOOR, NULL);
+                monster = nullptr;
+                eventListener->onReceive(Event::DOOR, nullptr);
             }
         }
     }
@@ -295,7 +308,8 @@ public:
             nextMap = object->getStringProperty("a");
             nextPosition.x = object->getIntProperty("x");
             nextPosition.y = object->getIntProperty("y");
-            eventListener->onReceive(Event::TRANSFER, NULL);
+            eventListener->onReceive(Event::SAVE_MAP, nullptr);
+            eventListener->onReceive(Event::TRANSFER, nullptr);
         } else if (object->type == "shop") {
 
             int arg = object->getIntProperty("a");
@@ -330,7 +344,7 @@ public:
                     objectLayer->remove(monster);
                 }
             }
-            monster = NULL;
+            monster = nullptr;
         }
     }
 
@@ -356,11 +370,10 @@ public:
 
     void onSelectItem(unsigned int index) override {
 
-        LOGI("World","onSelectItem %d",index);
         std::string &mapName = visitedList[index];
         nextMap = mapName;
         nextPosition = {-1.f,-1.f};
-        eventListener->onReceive(TRANSFER,NULL);
+        eventListener->onReceive(TRANSFER, nullptr);
     }
 
     ~World() {

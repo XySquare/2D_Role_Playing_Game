@@ -7,6 +7,7 @@
 
 
 enum Event: unsigned char {
+    RESUME,
     RUNNING,
     TRANSFER,
     ITEM,
@@ -14,10 +15,12 @@ enum Event: unsigned char {
     DOOR,
     PAUSE,
     SHOP,
+    SAVE_MAP,
     LOAD_MAP,
     ESCAPE,
     NOTIFICATION,
-    MONSTER_INFO
+    MONSTER_INFO,
+    WEBVIEW
 };
 
 class EventListener {

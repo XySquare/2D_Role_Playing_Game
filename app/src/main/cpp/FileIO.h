@@ -22,19 +22,9 @@ public:
     FileIO(const char *externalFilesDir, AAssetManager *aAssetManager) : externalFilesDir(
             externalFilesDir), aAssetManager(aAssetManager) {}
 
-    /**
-     * Open a file for output operations and discard contents. Create if not exists.
-     * Note: The returned file should be closed by calling fclose.
-     * Return: NULL if fail, the errno variable is also set.
-     */
-    FILE *writeFile(const char *fileName) {
+    std::string getExternalFilePath(const char *fileName) {
 
-        return fopen((externalFilesDir + fileName).c_str(), "w");
-    }
-
-    FILE *readFile(const char *fileName) {
-
-        return fopen((externalFilesDir + fileName).c_str(), "r");
+        return externalFilesDir + fileName;
     }
 
     /**

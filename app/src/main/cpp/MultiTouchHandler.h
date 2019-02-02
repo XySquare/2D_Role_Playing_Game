@@ -37,7 +37,6 @@ public:
     void onTouch(Touch event){
 
         syn.lock();
-        LOGI("MultiTouchHandler","%d %d,%d",event.action,event.x,event.y);
         touchEventsBuffer.push_back(event);
         syn.unlock();
     }

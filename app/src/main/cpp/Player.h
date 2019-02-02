@@ -36,9 +36,20 @@ public:
 
     Property *prop;
 
-    Player(float x, float y) : DynamicGameObject(x, y) {
+    Player() : DynamicGameObject(0, 0) {
 
         prop = new Property(1,20,2,1,1);
+    }
+
+    void reset(){
+
+        //state = PLAYER_STATE_DOWN;
+        stateTime = 0;
+        prop->lv = 1;
+        prop->maxHp = prop->hp = 20;
+        prop->atk = 2;
+        prop->def = 1;
+        prop->agi = 1;
     }
 
     void update(float deltaTime) {
